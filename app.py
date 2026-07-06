@@ -5,575 +5,457 @@ Aufbauend auf: Karrenbauer & Breitner (2022)
 """
 
 import streamlit as st
-import pandas as pd
-import numpy as np
-import pickle
-import json
-from datetime import datetime
+from statistics import mean
 
-st.set_page_config(
-    page_title="IT Portfolio Risk Assessment",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+try:
+    import plotly.graph_objects as go
+    HAS_PLOTLY = True
+except ImportError:
+    HAS_PLOTLY = False
 
-st.markdown("""
+# --------------------------------------------------------------------------------------
+# Design-Tokens
+# --------------------------------------------------------------------------------------
+BG        = "#1b1917"   # warmes Fast-Schwarz
+PANEL     = "#231f1d"   # Karten / Panels
+PANEL_2   = "#2a2523"   # etwas heller
+BORDER    = "#332d29"
+TEXT      = "#e6e3e0"
+MUTED     = "#8a8178"
+ACCENT    = "#cf9b6a"   # warmer Tan/Gold-Akzent (Kategorien, Links, Highlights)
+RED       = "#e5484d"   # High-Risk
+
+LEVEL_COLORS = {
+    "Low":       "#3ba55d",
+    "Medium":    "#d9a441",
+    "High":      "#e5484d",
+    "Very High": "#c1121f",
+    "N/A":       MUTED,
+}
+
+# --------------------------------------------------------------------------------------
+# Parameter-Schema:  key -> (Label, Optionen, Kurzlabel fuer Radar, Tooltip)
+# Reihenfolge innerhalb der Kategorien entspricht dem Design.
+# --------------------------------------------------------------------------------------
+LEVELS = ["Low", "Medium", "High", "Very High"]
+
+CATEGORIES = {
+    "COMPLEXITY": [
+        ("team_size", "Team Size", ["1-5", "6-10", "11-20", "20+"], "Team Size",
+         "Number of people actively working on the project. 1-5 = small team, 20+ = large team. "
+         "Larger teams raise coordination and communication overhead."),
+        ("complexity", "Complexity", LEVELS, "Complexity",
+         "Overall technical and functional complexity. Low = well-understood, routine work; "
+         "Very High = novel, highly intricate requirements."),
+        ("integration_complexity", "Integration Complexity", LEVELS, "Integration",
+         "Degree to which the project must integrate with existing systems and interfaces. "
+         "Low = largely standalone; Very High = many tightly-coupled dependencies."),
+    ],
+    "EFFICIENCY": [
+        ("budget", "Budget", ["$0-50K", "$50K-200K", "$200K-500K", "$500K+"], "Budget",
+         "Total budget allocated to the project. Note: in this prototype larger budget tiers are "
+         "treated as higher risk (larger scope and financial exposure)."),
+        ("budget_utilization", "Budget Utilization", LEVELS, "Budget Util.",
+         "How much of the allocated budget is expected to be consumed or is already committed. "
+         "High utilization leaves little buffer for change."),
+    ],
+    "RISK": [
+        ("resource_availability", "Resource Availability", LEVELS, "Resources",
+         "Availability of required staff, skills and infrastructure. Note: in this prototype a "
+         "higher slider position adds to the risk score (see direction note in the docs)."),
+        ("technical_debt", "Technical Debt", LEVELS, "Tech Debt",
+         "Amount of accumulated shortcuts, legacy code and deferred maintenance the project must "
+         "work with. Low = clean codebase; Very High = heavy debt burden."),
+        ("team_turnover", "Team Turnover", LEVELS, "Turnover",
+         "Expected churn among team members over the project's lifetime. Higher turnover threatens "
+         "knowledge continuity."),
+    ],
+    "STRATEGY": [
+        ("past_delivery_success", "Past Delivery Success", LEVELS, "Post Delivery",
+         "Track record of comparable past projects delivered by this team/organisation. Note: in "
+         "this prototype a higher slider position adds to the risk score (see direction note)."),
+    ],
+    "URGENCY": [
+        ("schedule_pressure", "Schedule Pressure", LEVELS, "Schedule",
+         "How tight the deadline is relative to the scope. Low = comfortable schedule; "
+         "Very High = aggressive, high-pressure timeline."),
+    ],
+}
+
+# flache, geordnete Liste aller Parameter (fuer Score + Radar + Ergebnisliste)
+FLAT_PARAMS = [(k, lbl, opts, short, tip)
+               for group in CATEGORIES.values()
+               for (k, lbl, opts, short, tip) in group]
+PARAM_LABEL = {k: lbl for (k, lbl, _, _, _) in FLAT_PARAMS}
+PARAM_OPTS  = {k: opts for (k, _, opts, _, _) in FLAT_PARAMS}
+PARAM_SHORT = {k: short for (k, _, _, short, _) in FLAT_PARAMS}
+
+# --------------------------------------------------------------------------------------
+# Score-Logik
+# --------------------------------------------------------------------------------------
+def value_to_score(key, value):
+    """Ordinalwert 1..4 nach Slider-Position, oder None bei N/A."""
+    if value is None:
+        return None
+    return PARAM_OPTS[key].index(value) + 1
+
+def project_score(params):
+    """Mittelwert der gesetzten Parameter (N/A ausgeschlossen), oder None."""
+    vals = [value_to_score(k, v) for k, v in params.items() if v is not None]
+    return round(mean(vals), 2) if vals else None
+
+def score_to_level(score):
+    if score is None:
+        return "N/A"
+    if score < 1.75:
+        return "Low"
+    if score < 2.5:
+        return "Medium"
+    if score < 3.25:
+        return "High"
+    return "Very High"
+
+def portfolio_score(projects):
+    scores = [project_score(p["params"]) for p in projects]
+    scores = [s for s in scores if s is not None]
+    return round(mean(scores), 2) if scores else None
+
+# --------------------------------------------------------------------------------------
+# Setup + CSS
+# --------------------------------------------------------------------------------------
+st.set_page_config(page_title="Portfolio Risk Assessment",
+                   layout="wide",
+                   initial_sidebar_state="collapsed")
+
+st.markdown(f"""
 <style>
-  .stApp { background:#212121; color:#ececec; }
-  section[data-testid="stSidebar"] > div:first-child {
-      background:#171717; border-right:1px solid #2d2d2d;
-  }
+    /* ---- Grundflaechen ---- */
+    [data-testid="stAppViewContainer"], [data-testid="stMain"] {{ background-color:{BG}; }}
+    [data-testid="stHeader"] {{ background:transparent; }}
+    [data-testid="stSidebar"] {{ background-color:{PANEL}; border-right:1px solid {BORDER}; }}
+    .block-container {{ padding-top:2.2rem; padding-bottom:4rem; max-width:1500px; }}
 
-  /* Input-Bar */
-  .input-bar {
-      display:flex; align-items:center; gap:10px;
-      background:#2f2f2f; border:1px solid #404040;
-      border-radius:999px; padding:10px 18px;
-      margin-bottom:32px;
-  }
-  .input-bar input { background:transparent; border:none; outline:none;
-      color:#ececec; font-size:15px; flex:1; }
+    /* ---- Typografie ---- */
+    html, body, [class*="css"] {{ color:{TEXT}; }}
+    h1 {{ font-weight:600; letter-spacing:-0.01em; }}
+    .subtle {{ color:{MUTED}; font-size:0.95rem; }}
 
-  /* Karten */
-  .card {
-      background:#2f2f2f; border:1px solid #3a3a3a;
-      border-radius:14px; padding:20px 22px; margin-bottom:12px;
-  }
-  .card-sm {
-      background:#2a2a2a; border:1px solid #3a3a3a;
-      border-radius:10px; padding:12px 16px; margin-bottom:8px;
-  }
+    /* ---- Kategorie-Ueberschrift ---- */
+    .cat-header {{
+        color:{ACCENT}; text-transform:uppercase; letter-spacing:0.14em;
+        font-size:0.78rem; font-weight:600; margin:1.7rem 0 0.7rem 0;
+    }}
+    .param-label {{ font-weight:600; font-size:0.9rem; margin:0.2rem 0 0.15rem 0; }}
+    .tick-row {{
+        display:flex; justify-content:space-between; color:{ACCENT};
+        font-size:0.7rem; opacity:0.75; margin:-0.2rem 0 0.9rem 0;
+    }}
 
-  /* Metriken */
-  .metric-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
-  .metric-box {
-      background:#2f2f2f; border:1px solid #3a3a3a; border-radius:14px;
-      padding:18px 16px; text-align:center;
-  }
-  .metric-title { font-size:11px; color:#8e8ea0; letter-spacing:.06em;
-      text-transform:uppercase; margin-bottom:8px; }
-  .metric-value { font-size:22px; font-weight:700; color:#ececec; }
+    /* ---- Panels ---- */
+    .section-card {{
+        background:{PANEL}; border:1px solid {BORDER}; border-radius:12px;
+        padding:1.4rem 1.6rem; margin-top:0.6rem;
+    }}
+    .divider {{ height:1px; background:{BORDER}; margin:1.4rem 0; border:none; }}
 
-  /* Risk-Badges */
-  .badge-low      { background:#0d2a1a; color:#4ade80; border:1px solid #14532d;
-      padding:4px 12px; border-radius:999px; font-weight:600; font-size:13px; display:inline-block; }
-  .badge-medium   { background:#2d2008; color:#fbbf24; border:1px solid #78350f;
-      padding:4px 12px; border-radius:999px; font-weight:600; font-size:13px; display:inline-block; }
-  .badge-high     { background:#2d0d0d; color:#f87171; border:1px solid #7f1d1d;
-      padding:4px 12px; border-radius:999px; font-weight:600; font-size:13px; display:inline-block; }
-  .badge-critical { background:#3d0808; color:#fca5a5; border:1px solid #991b1b;
-      padding:4px 12px; border-radius:999px; font-weight:600; font-size:13px; display:inline-block; }
+    /* ---- Buttons ---- */
+    .stButton > button {{
+        background:{PANEL_2}; color:{TEXT}; border:1px solid {BORDER};
+        border-radius:8px; font-weight:500; padding:0.4rem 0.9rem;
+    }}
+    .stButton > button:hover {{ border-color:{ACCENT}; color:{ACCENT}; }}
 
-  /* Sidebar-Einträge */
-  .sidebar-item {
-      background:#1e1e1e; border:1px solid #2d2d2d; border-radius:10px;
-      padding:10px 14px; margin-bottom:6px; cursor:pointer;
-  }
-  .sidebar-item:hover { background:#252525; border-color:#404040; }
-  .sidebar-item-title { font-size:13px; font-weight:600; color:#ececec; }
-  .sidebar-item-meta  { font-size:11px; color:#8e8ea0; margin-top:2px; }
+    /* ---- Select-Slider Feinschliff ---- */
+    [data-testid="stSelectSlider"] label {{ display:none; }}   /* eigenes Label wird separat gerendert */
 
-  /* Pending-Projekt-Tags */
-  .proj-tag {
-      display:inline-block; background:#1a3a2a; color:#4ade80;
-      border:1px solid #14532d; border-radius:999px;
-      padding:3px 12px; font-size:12px; margin:3px;
-  }
+    /* ---- Text-Input ---- */
+    [data-testid="stTextInput"] input {{
+        background:{PANEL_2}; color:{TEXT}; border:1px solid {BORDER};
+    }}
 
-  /* Kategorie-Label */
-  .cat-label {
-      font-size:10px; color:#8e8ea0; letter-spacing:.1em;
-      text-transform:uppercase; margin:20px 0 8px;
-      border-bottom:1px solid #2d2d2d; padding-bottom:6px;
-  }
-
-  /* Allgemeine Anpassungen */
-  .stButton > button {
-      border-radius:10px !important; font-weight:600 !important;
-      border:1px solid #3a3a3a !important;
-  }
-  .stButton > button[kind="primary"] {
-      background:#10a37f !important; border-color:#10a37f !important; color:#fff !important;
-  }
-  .stButton > button[kind="secondary"] {
-      background:#2f2f2f !important; color:#ececec !important;
-  }
-  div[data-testid="stSelectSlider"] label { color:#c5c5d2 !important; font-size:13px !important; }
-  div[data-testid="stSelectSlider"] div[data-baseweb="slider"] { margin-top:4px; }
-  .stProgress > div > div > div { background:#10a37f !important; border-radius:999px; }
-  .stDivider { border-color:#2d2d2d !important; }
-  h1,h2,h3 { color:#ececec !important; }
-  p, li { color:#c5c5d2; }
-  .stCaption { color:#8e8ea0 !important; }
-  .stInfo    { background:#0d2a1a !important; color:#4ade80 !important; border-color:#14532d !important; border-radius:12px !important; }
-  .stWarning { background:#2d2008 !important; color:#fbbf24 !important; border-color:#78350f !important; border-radius:12px !important; }
-  .stSuccess { background:#0d2a1a !important; color:#4ade80 !important; border-color:#14532d !important; border-radius:12px !important; }
+    /* ---- Radio (Configure/Results Nav) als Segment-Control ---- */
+    div[role="radiogroup"] {{ gap:0.3rem; }}
 </style>
 """, unsafe_allow_html=True)
 
+# --------------------------------------------------------------------------------------
+# Session-State
+# --------------------------------------------------------------------------------------
+ss = st.session_state
+ss.setdefault("portfolio_created", False)
+ss.setdefault("portfolio_name", "New Portfolio")
+ss.setdefault("projects", [])        # [{"name": str, "params": {key: value|None}}]
+ss.setdefault("view", "Configure")   # "Configure" | "Results"
+ss.setdefault("draft_id", 0)         # steigt bei jedem Add Project -> frische Widgets
 
-# ── Modell laden ──────────────────────────────────────────────────────────────
-@st.cache_resource
-def load_model():
-    with open('model_data.pkl', 'rb') as f:
-        return pickle.load(f)
-
-md           = load_model()
-model        = md['model']
-le_target    = md['le_target']
-le_dict      = md['le_dict']
-feature_cols = md['feature_cols']
-num_cols     = md['num_cols']
-cat_cols     = md['cat_cols']
-stats        = md['stats']
-cat_values   = md['cat_values']
-
-RISIKOGEWICHTE = {'Low': 1, 'Medium': 2, 'High': 3, 'Critical': 4}
-
-# ── Smarte Slider-Definitionen ────────────────────────────────────────────────
-# Für numerisch messbare Kategorien: konkrete Wertebereiche
-# Für qualitative Kategorien: Low / Medium / High / Very High
-# N/A = Standardwert (Median), wird beim Predict durch Median ersetzt
-
-SLIDERS = {
-    # ── Complexity ────────────────────────────────────────────────────────────
-    'Team_Size': dict(
-        label='Team Size', cat='Complexity',
-        options=['N/A', '1–5', '6–10', '11–20', '20+'],
-        values =[None,    3,    8,      15,      24]
-    ),
-    'Complexity_Score': dict(
-        label='Complexity', cat='Complexity',
-        options=['N/A', 'Low', 'Medium', 'High', 'Very High'],
-        values =[None,   3.0,   5.5,     7.5,    9.5]
-    ),
-    'Integration_Complexity': dict(
-        label='Integration Complexity', cat='Complexity',
-        options=['N/A', 'Low', 'Medium', 'High', 'Very High'],
-        values =[None,   2.0,   4.5,     7.0,    9.5]
-    ),
-    # ── Efficiency ───────────────────────────────────────────────────────────
-    'Project_Budget_USD': dict(
-        label='Budget', cat='Efficiency',
-        options=['N/A', '< $500k', '$500k–$1M', '$1M–$1.5M', '> $1.5M'],
-        values =[None,  350_000,   750_000,     1_250_000,   1_800_000]
-    ),
-    'Budget_Utilization_Rate': dict(
-        label='Budget Utilization', cat='Efficiency',
-        options=['N/A', '< 75 %', '75–90 %', '90–110 %', '> 110 %'],
-        values =[None,   0.65,     0.82,       1.00,       1.25]
-    ),
-    # ── Risk ─────────────────────────────────────────────────────────────────
-    'Resource_Availability': dict(
-        label='Resource Availability', cat='Risk',
-        options=['N/A', 'Very Low', 'Low', 'Medium', 'High'],
-        values =[None,   0.35,       0.50,  0.65,    0.90]
-    ),
-    'Technical_Debt_Level': dict(
-        label='Technical Debt', cat='Risk',
-        options=['N/A', 'Low', 'Medium', 'High', 'Very High'],
-        values =[None,   0.15,  0.40,    0.65,   0.90]
-    ),
-    'Team_Turnover_Rate': dict(
-        label='Team Turnover', cat='Risk',
-        options=['N/A', 'Low', 'Medium', 'High', 'Very High'],
-        values =[None,   0.05,  0.20,    0.45,   0.75]
-    ),
-    # ── Strategy ─────────────────────────────────────────────────────────────
-    'Previous_Delivery_Success_Rate': dict(
-        label='Past Delivery Success', cat='Strategy',
-        options=['N/A', 'Low', 'Medium', 'High', 'Very High'],
-        values =[None,   0.25,  0.55,    0.80,   0.95]
-    ),
-    # ── Urgency ──────────────────────────────────────────────────────────────
-    'Schedule_Pressure': dict(
-        label='Schedule Pressure', cat='Urgency',
-        options=['N/A', 'Low', 'Medium', 'High', 'Very High'],
-        values =[None,   0.03,  0.12,    0.28,   0.45]
-    ),
-}
-
-# Typ A: Portfoliosummen (Karrenbauer & Breitner 2022, Eq. 4)
-TYP_A = {
-    'Team_Size':          ('Total Team Size',    100),
-    'Project_Budget_USD': ('Total Budget (USD)', 10_000_000),
-}
-# Typ B: Portfoliodurchschnitte (Karrenbauer & Breitner 2022, Eq. 4)
-TYP_B = {
-    'Resource_Availability':   ('Avg. Resource Avail.', 0.5,  True),
-    'Budget_Utilization_Rate': ('Avg. Budget Util.',    1.0,  False),
-    'Schedule_Pressure':       ('Avg. Schedule Press.', 0.15, False),
-}
-
-
-# ── Hilfsfunktionen ───────────────────────────────────────────────────────────
-def badge(level: str) -> str:
-    return f'<span class="badge-{level.lower()}">{level}</span>'
-
-def opt_to_val(col: str, option: str) -> float:
-    """Wandelt Slider-Option in numerischen Wert um. N/A → Median."""
-    d = SLIDERS[col]
-    idx = d['options'].index(option)
-    v   = d['values'][idx]
-    return stats[col]['median'] if v is None else float(v)
-
-def predict(eingabe: dict) -> tuple:
-    row = {}
-    for col in num_cols:
-        row[col] = float(eingabe.get(col, stats[col]['median']))
-    for col in cat_cols:
-        raw = eingabe.get(col, cat_values[col][0])
-        le  = le_dict[col]
-        row[col] = int(le.transform([raw])[0]) if raw in le.classes_ else 0
-    X   = pd.DataFrame([row])[feature_cols]
-    p   = model.predict_proba(X)[0]
-    k   = le_target.inverse_transform([np.argmax(p)])[0]
-    return k, dict(zip(le_target.classes_, p))
-
-def portfolio_risk(klassen: list) -> tuple:
-    s = float(np.mean([RISIKOGEWICHTE[k] for k in klassen]))
-    if s <= 1.5: return s, 'Low'
-    if s <= 2.5: return s, 'Medium'
-    if s <= 3.5: return s, 'High'
-    return s, 'Critical'
-
-def check_restrictions(projekte: list) -> list:
-    out = []
-    for col, (lbl, lim) in TYP_A.items():
-        sm = sum(p.get(col, 0) for p in projekte)
-        if sm > lim:
-            out.append(f"[Sum] {lbl}: {sm:,.0f} > {lim:,.0f}")
-    for col, (lbl, thr, inv) in TYP_B.items():
-        m = float(np.mean([p.get(col, stats[col]['median']) for p in projekte]))
-        if (m < thr if inv else m > thr):
-            out.append(f"[Avg] {lbl}: {m:.3f} ({'below' if inv else 'above'} {thr})")
-    return out
-
-RECOMMENDATIONS = {
-    'Low':      '✅ Portfolio well-positioned. Regular monitoring is sufficient.',
-    'Medium':   '🟡 Portfolio acceptable. Monitor high-risk projects closely.',
-    'High':     '🔴 Portfolio critical. Reprioritize resources immediately.',
-    'Critical': '🚨 Portfolio unsustainable. Immediate restructuring required.',
-}
-
-
-# ── Session State initialisieren ──────────────────────────────────────────────
-defaults = {
-    'view':            'input',   # 'input' | 'results'
-    'pending':         [],        # Projekte im aktuellen Aufbau
-    'saved':           [],        # Gespeicherte abgeschlossene Portfolios
-    'active_saved':    None,      # Index des angezeigten gespeicherten Portfolios
-    'results':         None,      # Berechnetes Ergebnis-Portfolio
-    'slider_vals':     {},        # Aktuelle Slider-Auswahlen
-}
-for k, v in defaults.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
-
-
-# ── SIDEBAR: Portfolio-Verlauf ────────────────────────────────────────────────
+# --------------------------------------------------------------------------------------
+# Sidebar (minimal – der Toggle oben links blendet sie ein/aus)
+# --------------------------------------------------------------------------------------
 with st.sidebar:
-    st.markdown(
-        "<p style='font-size:18px; font-weight:700; color:#ececec; "
-        "margin-bottom:16px;'>📊 IT Risk Assessment</p>",
-        unsafe_allow_html=True
-    )
-
-    if st.button("＋  New Portfolio", use_container_width=True, type="primary"):
-        st.session_state.view         = 'input'
-        st.session_state.pending      = []
-        st.session_state.results      = None
-        st.session_state.slider_vals  = {}
-        st.session_state.active_saved = None
-        st.rerun()
-
-    st.markdown("<div style='margin:12px 0 8px; font-size:11px; color:#8e8ea0; "
-                "letter-spacing:.08em; text-transform:uppercase;'>Saved Portfolios</div>",
-                unsafe_allow_html=True)
-
-    if not st.session_state.saved:
-        st.markdown("<p style='font-size:12px; color:#555;'>No portfolios saved yet.</p>",
+    st.markdown("### Portfolios")
+    if ss.portfolio_created:
+        st.markdown(f"<span class='subtle'>Active:</span> **{ss.portfolio_name}**",
                     unsafe_allow_html=True)
+        st.caption(f"{len(ss.projects)} project(s)")
     else:
-        for i, pf in enumerate(st.session_state.saved):
-            col_a, col_b = st.columns([5, 1])
-            with col_a:
-                if st.button(
-                    f"{'▶ ' if st.session_state.active_saved == i else ''}"
-                    f"{pf['name']}",
-                    key=f"load_{i}", use_container_width=True
-                ):
-                    st.session_state.active_saved = i
-                    st.session_state.results      = pf
-                    st.session_state.view         = 'results'
-                    st.rerun()
-            with col_b:
-                if st.button("✕", key=f"del_{i}"):
-                    st.session_state.saved.pop(i)
-                    if st.session_state.active_saved == i:
-                        st.session_state.active_saved = None
-                        st.session_state.view         = 'input'
-                    st.rerun()
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# VIEW: INPUT
-# ══════════════════════════════════════════════════════════════════════════════
-if st.session_state.view == 'input':
-
-    st.markdown(
-        "<h1 style='text-align:center; font-size:26px; "
-        "margin:8px 0 4px;'>IT Portfolio Risk Assessment</h1>",
-        unsafe_allow_html=True
-    )
-    st.markdown(
-        "<p style='text-align:center; color:#8e8ea0; font-size:13px; "
-        "margin-bottom:28px;'>Aufbauend auf Karrenbauer & Breitner (2022)</p>",
-        unsafe_allow_html=True
-    )
-
-    # ── Eingabe-Bar (zentriert, ChatGPT-Stil) ─────────────────────────────────
-    _, center, _ = st.columns([1, 4, 1])
-    with center:
-        bar_l, bar_r = st.columns([6, 1])
-        with bar_l:
-            proj_name = st.text_input(
-                "pname", placeholder="Project name…",
-                label_visibility="collapsed", key="proj_name_input"
-            )
-        with bar_r:
-            submit_btn = st.button("→", type="primary", use_container_width=True)
-
-        # Pending-Projekte anzeigen
-        if st.session_state.pending:
-            tags = " ".join(
-                f'<span class="proj-tag">✓ {p["name"]}</span>'
-                for p in st.session_state.pending
-            )
-            st.markdown(
-                f"<div style='margin:8px 0 0;'>{tags}</div>",
-                unsafe_allow_html=True
-            )
-            st.caption(
-                f"{len(st.session_state.pending)} project(s) added. "
-                "Fill sliders for next project or hit → to calculate."
-            )
-
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-
-        # ── Slider-Bereich ────────────────────────────────────────────────────
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-
-        kategorien = {}
-        for col, d in SLIDERS.items():
-            kategorien.setdefault(d['cat'], []).append(col)
-
-        eingabe = {}
-        for kat, cols_ in kategorien.items():
-            st.markdown(f'<div class="cat-label">{kat}</div>', unsafe_allow_html=True)
-            for col in cols_:
-                d       = SLIDERS[col]
-                default = st.session_state.slider_vals.get(col, 'N/A')
-                if default not in d['options']:
-                    default = 'N/A'
-                chosen = st.select_slider(
-                    d['label'],
-                    options=d['options'],
-                    value=default,
-                    key=f"sl_{col}"
-                )
-                st.session_state.slider_vals[col] = chosen
-                eingabe[col] = opt_to_val(col, chosen)
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        # ── Projekt hinzufügen ────────────────────────────────────────────────
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-        if st.button("＋  Add another project", use_container_width=True):
-            name = proj_name.strip() or f"Project {len(st.session_state.pending) + 1}"
-            st.session_state.pending.append({
-                'name':  name,
-                'daten': eingabe.copy(),
-                'opts':  {c: st.session_state.slider_vals.get(c, 'N/A') for c in SLIDERS}
-            })
-            # Slider zurücksetzen
-            for col in SLIDERS:
-                st.session_state.slider_vals[col] = 'N/A'
-            st.rerun()
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # ── Submit: Ergebnis berechnen ────────────────────────────────────────────
-    if submit_btn:
-        name  = proj_name.strip() or f"Project {len(st.session_state.pending) + 1}"
-        k, p  = predict(eingabe)
-        alle  = st.session_state.pending + [{
-            'name': name, 'daten': eingabe.copy(),
-            'opts': {c: st.session_state.slider_vals.get(c, 'N/A') for c in SLIDERS}
-        }]
-        # Für jedes Projekt Vorhersage berechnen
-        for proj in alle:
-            if 'klasse' not in proj:
-                proj['klasse'], proj['proba'] = predict(proj['daten'])
-
-        ts    = datetime.now().strftime("%d.%m. %H:%M")
-        score, g_k = portfolio_risk([pr['klasse'] for pr in alle])
-        result = {
-            'name':       f"Portfolio {len(st.session_state.saved) + 1}  ·  {ts}",
-            'projects':   alle,
-            'score':      score,
-            'klasse':     g_k,
-            'violations': check_restrictions([pr['daten'] for pr in alle]),
-            'ts':         ts,
-        }
-        st.session_state.results      = result
-        st.session_state.view         = 'results'
-        st.session_state.pending      = []
-        st.session_state.slider_vals  = {}
+        st.caption("No portfolio yet.")
+    st.markdown("<hr class='divider'>", unsafe_allow_html=True)
+    if st.button("Reset all", use_container_width=True):
+        for k in ["portfolio_created", "portfolio_name", "projects", "view", "draft_id"]:
+            ss.pop(k, None)
         st.rerun()
 
+# --------------------------------------------------------------------------------------
+# Top-Navigation (Configure / Results)
+# --------------------------------------------------------------------------------------
+nav_col, _ = st.columns([0.35, 0.65])
+with nav_col:
+    view = st.radio("nav", ["Configure", "Results"],
+                    index=0 if ss.view == "Configure" else 1,
+                    horizontal=True, label_visibility="collapsed")
+    ss.view = view
 
-# ══════════════════════════════════════════════════════════════════════════════
-# VIEW: RESULTS
-# ══════════════════════════════════════════════════════════════════════════════
-elif st.session_state.view == 'results':
-    res = st.session_state.results
-    if res is None:
-        st.session_state.view = 'input'
-        st.rerun()
+st.markdown("<hr class='divider'>", unsafe_allow_html=True)
 
-    projects   = res['projects']
-    klassen    = [p['klasse'] for p in projects]
-    score      = res['score']
-    g_klasse   = res['klasse']
-    violations = res['violations']
 
-    # ── Top-Bar ───────────────────────────────────────────────────────────────
-    top_l, top_r = st.columns([1, 1])
-    with top_l:
-        if st.button("← Back", type="secondary"):
-            st.session_state.view        = 'input'
-            st.session_state.results     = None
-            st.session_state.pending     = []
-            st.session_state.slider_vals = {}
+# ======================================================================================
+# EMPTY STATE
+# ======================================================================================
+def render_empty_state():
+    st.markdown(
+        f"""
+        <div style="text-align:center; padding:7rem 0;">
+            <div style="font-size:3.4rem; color:{MUTED}; margin-bottom:0.6rem;">🗎</div>
+            <div style="font-size:1.4rem; font-weight:600; margin-bottom:0.3rem;">
+                No Portfolio Selected</div>
+            <div class="subtle">Create a new portfolio to get started</div>
+        </div>
+        """, unsafe_allow_html=True)
+    c1, c2, c3 = st.columns([1, 1, 1])
+    with c2:
+        if st.button("＋  Create New Portfolio", use_container_width=True):
+            ss.portfolio_created = True
+            ss.view = "Configure"
             st.rerun()
-    with top_r:
-        if st.button("💾  Save Portfolio", type="primary"):
-            already = any(s['name'] == res['name'] for s in st.session_state.saved)
-            if not already:
-                st.session_state.saved.append(res)
-                st.session_state.active_saved = len(st.session_state.saved) - 1
-            st.success("Portfolio saved.")
 
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-    st.markdown(f"### {res['name']}")
 
-    # ── Kennzahlen ────────────────────────────────────────────────────────────
-    m1, m2, m3, m4 = st.columns(4)
-    for col_obj, title, value in [
-        (m1, "Projects",         str(len(projects))),
-        (m2, "Avg. Risk Score",  f"{score:.2f} / 4.00"),
-        (m3, "Portfolio Risk",   badge(g_klasse)),
-        (m4, "Restrictions",     f"{'⚠️' if violations else '✅'}  {len(violations)}"),
-    ]:
-        with col_obj:
-            st.markdown(
-                f'<div class="metric-box">'
-                f'<div class="metric-title">{title}</div>'
-                f'<div class="metric-value">{value}</div>'
-                f'</div>',
-                unsafe_allow_html=True
-            )
+# ======================================================================================
+# CONFIGURE VIEW
+# ======================================================================================
+def render_slider_row(pid, key, label, opts, tooltip, default_na=True):
+    """Ein Parameter: Label + Tooltip, N/A-Checkbox links, Select-Slider rechts, Ticks darunter.
+       Gibt den gesetzten Wert (str) oder None (bei N/A) zurueck."""
+    st.markdown(f"<div class='param-label'>{label}</div>", unsafe_allow_html=True)
+    na_col, sl_col = st.columns([0.07, 0.93])
+    with na_col:
+        na = st.checkbox("N/A", value=default_na, key=f"na_{pid}_{key}",
+                         help="Leave this parameter unset (excluded from the risk score).")
+    with sl_col:
+        mid = opts[1]  # sinnvoller Default in der Mitte, wenn (noch) N/A
+        chosen = st.select_slider(" ", options=opts, value=mid,
+                                  key=f"sl_{pid}_{key}", disabled=na,
+                                  help=tooltip, label_visibility="collapsed")
+    ticks = "".join(f"<span>{o}</span>" for o in opts)
+    st.markdown(f"<div class='tick-row'>{ticks}</div>", unsafe_allow_html=True)
+    return None if na else chosen
 
-    st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
 
-    # ── Projektliste ──────────────────────────────────────────────────────────
-    st.markdown("#### Projects")
+def render_configure():
+    st.markdown("## Portfolio Configuration")
 
-    for i, proj in enumerate(projects):
-        with st.container():
-            c1, c2, c3, c4 = st.columns([3, 2, 3, 1])
-            with c1:
-                st.markdown(f"**{proj['name']}**")
-            with c2:
-                st.markdown(badge(proj['klasse']), unsafe_allow_html=True)
-            with c3:
-                p = proj['proba']
-                st.caption(
-                    f"L {p.get('Low',0):.0%}  ·  "
-                    f"M {p.get('Medium',0):.0%}  ·  "
-                    f"H {p.get('High',0):.0%}  ·  "
-                    f"C {p.get('Critical',0):.0%}"
-                )
-            with c4:
-                with st.expander("···"):
-                    st.markdown(f"**Probabilities – {proj['name']}**")
-                    pdf = pd.DataFrame({
-                        'Risk':  list(proj['proba'].keys()),
-                        'Prob':  list(proj['proba'].values())
-                    }).sort_values('Prob', ascending=False)
-                    st.bar_chart(pdf.set_index('Risk'), color="#10a37f")
+    st.markdown("**Portfolio Name**")
+    ss.portfolio_name = st.text_input("Portfolio Name", value=ss.portfolio_name,
+                                      label_visibility="collapsed")
 
-                    if proj.get('opts'):
-                        st.markdown("**Inputs:**")
-                        rows = [
-                            (SLIDERS[k]['label'], v)
-                            for k, v in proj['opts'].items()
-                            if v != 'N/A'
-                        ]
-                        if rows:
-                            st.dataframe(
-                                pd.DataFrame(rows, columns=['Feature', 'Level']),
-                                hide_index=True, use_container_width=True
-                            )
-                        else:
-                            st.caption("All sliders set to N/A.")
-            st.divider()
+    # ---- Liste bereits hinzugefuegter Projekte ----
+    if ss.projects:
+        head_l, head_r = st.columns([0.8, 0.2])
+        head_l.markdown("<span class='subtle'>Added Projects</span>", unsafe_allow_html=True)
+        head_r.markdown(f"<div style='text-align:right' class='subtle'>{len(ss.projects)} "
+                        f"project(s)</div>", unsafe_allow_html=True)
+        for i, proj in enumerate(ss.projects):
+            row_l, row_r = st.columns([0.95, 0.05])
+            row_l.markdown(f"<div style='color:{ACCENT}; padding:0.35rem 0;'>{proj['name']}</div>",
+                           unsafe_allow_html=True)
+            if row_r.button("🗑", key=f"del_{i}", help="Remove project"):
+                ss.projects.pop(i)
+                st.rerun()
+        st.markdown("<hr class='divider'>", unsafe_allow_html=True)
 
-    # ── Risikoverteilung ──────────────────────────────────────────────────────
-    st.markdown("#### Risk Distribution")
-    dist = pd.Series(klassen).value_counts().reindex(
-        ['Low', 'Medium', 'High', 'Critical'], fill_value=0
-    )
-    st.bar_chart(dist, color="#10a37f")
+    # ---- aktueller Projekt-Entwurf ----
+    pid = ss.draft_id
+    with st.container():
+        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
 
-    # ── Restriktions-Tracking ─────────────────────────────────────────────────
-    st.markdown("#### Restriction Tracking")
-    st.caption("Based on Karrenbauer & Breitner (2022), Eq. 3–8")
+        st.markdown("**Project Name**")
+        default_name = f"Project {len(ss.projects) + 1}"
+        proj_name = st.text_input("Project Name", value=default_name,
+                                  key=f"pname_{pid}", label_visibility="collapsed")
 
-    r1, r2 = st.columns(2)
-    with r1:
-        st.markdown("**Type A – Sums**")
-        for col, (lbl, lim) in TYP_A.items():
-            sm = sum(p['daten'].get(col, 0) for p in projects)
-            st.markdown(
-                f"{'✅' if sm <= lim else '⚠️'} **{lbl}**  "
-                f"`{sm:,.0f}` / `{lim:,.0f}`"
-            )
-            st.progress(min(sm / lim, 1.0))
+        draft = {}
+        for cat, params in CATEGORIES.items():
+            st.markdown(f"<div class='cat-header'>{cat}</div>", unsafe_allow_html=True)
+            for key, label, opts, _short, tip in params:
+                draft[key] = render_slider_row(pid, key, label, opts, tip)
 
-    with r2:
-        st.markdown("**Type B – Averages**")
-        for col, (lbl, thr, inv) in TYP_B.items():
-            m  = float(np.mean([p['daten'].get(col, stats[col]['median']) for p in projects]))
-            ok = m >= thr if inv else m <= thr
-            pct = float(np.clip(m / thr if not inv else thr / max(m, 1e-9), 0, 1))
-            st.markdown(
-                f"{'✅' if ok else '⚠️'} **{lbl}**  "
-                f"`{m:.3f}` / `{thr}`"
-            )
-            st.progress(pct)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    # ── Handlungsempfehlung ───────────────────────────────────────────────────
-    st.markdown("#### Recommendation")
-    st.info(RECOMMENDATIONS[g_klasse])
+    # ---- Aktionen ----
+    st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
+    a_col, b_col, _ = st.columns([0.22, 0.22, 0.56])
+    with a_col:
+        if st.button("＋  Add Project", use_container_width=True):
+            ss.projects.append({"name": proj_name, "params": draft})
+            ss.draft_id += 1          # frische Widgets fuer das naechste Projekt
+            st.rerun()
+    with b_col:
+        if st.button("🧮  Calculate Results", use_container_width=True):
+            if not ss.projects:
+                st.warning("Add at least one project before calculating results.")
+            else:
+                ss.view = "Results"
+                st.rerun()
 
-    if violations:
-        st.warning("**Restriction Violations:**\n" + "\n".join(f"- {v}" for v in violations))
 
-    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-    st.caption(
-        "Scientific prototype · Final decisions remain with experienced executives "
-        "(Karrenbauer & Breitner 2022)"
-    )
+# ======================================================================================
+# RESULTS VIEW
+# ======================================================================================
+def radar(params):
+    if not HAS_PLOTLY:
+        st.info("Install plotly to see the parameter-profile radar (pip install plotly).")
+        return
+    theta = [PARAM_SHORT[k] for (k, *_ ) in FLAT_PARAMS]
+    r = [value_to_score(k, params.get(k)) or 0 for (k, *_ ) in FLAT_PARAMS]
+    theta_closed = theta + [theta[0]]
+    r_closed = r + [r[0]]
+    fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(
+        r=r_closed, theta=theta_closed, fill="toself",
+        line=dict(color=RED, width=2), fillcolor="rgba(229,72,77,0.25)"))
+    fig.update_layout(
+        polar=dict(
+            bgcolor=BG,
+            radialaxis=dict(range=[0, 4], showticklabels=False, gridcolor=BORDER,
+                            linecolor=BORDER),
+            angularaxis=dict(gridcolor=BORDER, linecolor=BORDER,
+                             tickfont=dict(color=MUTED, size=10))),
+        paper_bgcolor="rgba(0,0,0,0)", showlegend=False,
+        margin=dict(l=40, r=40, t=30, b=30), height=360)
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def render_project_card(proj):
+    params = proj["params"]
+    score = project_score(params)
+    level = score_to_level(score)
+    color = LEVEL_COLORS[level]
+
+    # ---- immer sichtbar: Header + kompaktes Raster ----
+    def cell(key):
+        v = params.get(key)
+        v = v if v is not None else "N/A"
+        vc = color if v != "N/A" else MUTED
+        return (f"<div style='display:flex; justify-content:space-between; padding:0.25rem 0;'>"
+                f"<span style='color:{MUTED};'>{PARAM_LABEL[key]}</span>"
+                f"<span style='color:{vc}; font-weight:600;'>{v}</span></div>")
+
+    compact_keys = ["team_size", "complexity", "integration_complexity",
+                    "technical_debt", "team_turnover", "schedule_pressure"]
+    grid = ""
+    for row_start in range(0, len(compact_keys), 3):
+        cols = compact_keys[row_start:row_start + 3]
+        grid += "<div style='display:flex; gap:2.5rem;'>"
+        grid += "".join(f"<div style='flex:1;'>{cell(k)}</div>" for k in cols)
+        grid += "</div>"
+
+    st.markdown(
+        f"""
+        <div style="background:rgba(229,72,77,0.06); border:1px solid {color}55;
+                    border-radius:12px; padding:1.1rem 1.3rem; margin-bottom:0.8rem;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                <div style="font-size:1.15rem; font-weight:600;">{proj['name']}</div>
+                <div style="color:{MUTED}; font-size:0.85rem;">Risk Score {score if score
+                    is not None else '–'}</div>
+            </div>
+            <div style="color:{MUTED}; font-size:0.85rem; margin:0.1rem 0 0.9rem 0;">
+                Risk Level: <span style="color:{color}; font-weight:600;">{level}</span></div>
+            {grid}
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ---- ausklappbar: Radar + vollstaendige Parameterliste ----
+    with st.expander("Parameter profile & all parameters"):
+        left, right = st.columns([0.5, 0.5])
+        with left:
+            st.markdown("<div class='cat-header'>PARAMETER PROFILE</div>",
+                        unsafe_allow_html=True)
+            radar(params)
+        with right:
+            st.markdown("<div class='cat-header'>ALL PARAMETERS</div>", unsafe_allow_html=True)
+            rows = ""
+            for key, label, *_ in FLAT_PARAMS:
+                v = params.get(key)
+                v = v if v is not None else "N/A"
+                vc = TEXT if v != "N/A" else MUTED
+                rows += (f"<div style='display:flex; justify-content:space-between;"
+                         f" padding:0.3rem 0; border-bottom:1px solid {BORDER};'>"
+                         f"<span style='color:{MUTED};'>{label}</span>"
+                         f"<span style='color:{vc}; font-weight:600;'>{v}</span></div>")
+            rows += (f"<div style='display:flex; justify-content:space-between; padding:0.6rem 0"
+                     f" 0.1rem 0;'><span style='color:{MUTED};'>Risk Score</span>"
+                     f"<span style='color:{color}; font-weight:700;'>{level} · "
+                     f"{score if score is not None else '–'}</span></div>")
+            st.markdown(rows, unsafe_allow_html=True)
+
+
+def render_results():
+    st.markdown("## Risk Assessment Results")
+    st.markdown(f"<div class='subtle'>{ss.portfolio_name}</div>", unsafe_allow_html=True)
+
+    if not ss.projects:
+        st.info("No projects to assess yet. Go to **Configure**, add a project, and calculate.")
+        return
+
+    p_score = portfolio_score(ss.projects)
+    p_level = score_to_level(p_score)
+    p_color = LEVEL_COLORS[p_level]
+
+    # ---- Portfolio Risk Summary ----
+    st.markdown(
+        f"""
+        <div class="section-card" style="margin-bottom:1.4rem;">
+            <div style="font-size:1.2rem; font-weight:600; margin-bottom:1.1rem;">
+                Portfolio Risk Summary</div>
+            <div style="display:flex; gap:5rem;">
+                <div>
+                    <div class="subtle">Total Portfolio Risk</div>
+                    <div style="font-size:2rem; font-weight:700; color:{p_color};">
+                        {p_level}</div>
+                </div>
+                <div style="margin-left:auto; text-align:right;">
+                    <div class="subtle">Risk Score</div>
+                    <div style="font-size:1.6rem; font-weight:600;">
+                        {p_score if p_score is not None else '–'}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div class="subtle">Total Projects</div>
+                    <div style="font-size:1.6rem; font-weight:600;">{len(ss.projects)}</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("### Project Risk Breakdown")
+    for proj in ss.projects:
+        render_project_card(proj)
+
+
+# ======================================================================================
+# ROUTER
+# ======================================================================================
+if not ss.portfolio_created:
+    render_empty_state()
+elif ss.view == "Configure":
+    render_configure()
+else:
+    render_results()
