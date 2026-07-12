@@ -1,4 +1,7 @@
-streamlit
-pandas
-numpy
-scikit-learn
+imbalanced-learn==0.14.2
+joblib==1.5.3
+numpy==2.4.4
+pandas==3.0.2
+scikit-learn==1.8.0
+shap==0.52.0
+streamlit==1.59.1
