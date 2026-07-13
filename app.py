@@ -7,7 +7,7 @@ import streamlit as st
 import model_bridge as mb
 
 # --------------------------------------------------------------------------------------
-# Palette (neutrales Dark-Grau; Weiss nur als Textfarbe)
+# Palette
 # --------------------------------------------------------------------------------------
 BG, PANEL, PANEL_2, BORDER = "#262624", "#31312e", "#3c3c38", "#55554f"
 TEXT, MUTED, HEAD = "#f2f0ea", "#b3b0a8", "#d8d5cd"
@@ -22,22 +22,20 @@ STR = {
  "en": {"app_title": "Portfolio Risk Analyzer", "configure": "Configure", "results": "Results",
    "portfolios": "Portfolios", "new_portfolio": "New Portfolio", "no_portfolios": "No portfolios yet.",
    "no_pf_sel": "No Portfolio Selected", "create_pf": "Create a new portfolio to get started",
-   "create_btn": "Create New Portfolio", "language": "Language",
-   "pf_config": "Portfolio Configuration", "pf_name": "Portfolio Name", "added_projects": "Added Projects",
-   "project_name": "Project Name", "edit_hint": "Click a project to edit it.",
+   "create_btn": "Create New Portfolio", "pf_config": "Portfolio Configuration", "pf_name": "Portfolio Name",
+   "added_projects": "Added Projects", "project_name": "Project Name",
    "min_hint": "Set at least {n} features. The more features you set, the more reliable the prediction.",
-   "single": "Details", "overall": "Overall", "add_project": "Add Project", "update_project": "Update Project",
-   "calc": "Calculate Results", "warn_min": "Please set at least {n} features (currently {c}).",
-   "warn_add": "Please add at least one project first.", "risk_results": "Risk Assessment Results",
-   "pf_summary": "Portfolio Risk Summary", "total_risk": "Total Portfolio Risk",
+   "single": "Details", "overall": "Overall", "add_project": "Add Project", "calc": "Calculate Results",
+   "warn_min": "Please set at least {n} features (currently {c}).", "warn_add": "Please add at least one project first.",
+   "risk_results": "Risk Assessment Results", "pf_summary": "Portfolio Risk Summary", "total_risk": "Total Portfolio Risk",
    "p_elev": "P(\u22651 elevated-risk project)", "exp_high": "Expected # \u2265 High", "projects": "Projects",
    "breakdown": "Project Risk Breakdown", "no_projects": "No projects yet. Add one in Configure and calculate.",
    "drivers_up": "INCREASES RISK", "drivers_down": "DECREASES RISK",
    "shap_note": "SHAP contribution to overall risk (risk-weighted across classes).",
    "default_expl": "Features you didn't set use the dataset's typical value \u2014 which still influences the result. Such drivers are marked (default).",
-   "set_params": "Set parameters", "no_set": "No features set.", "exp_score": "Expected score",
-   "features_set": "feature(s) set", "custom": "custom", "levels": "Levels (left \u2192 right): ",
-   "reliability": "Reliability", "rel_low": "Low", "rel_med": "Medium", "rel_high": "High",
+   "set_params": "Set parameters", "exp_score": "Expected score", "features_set": "feature(s) set",
+   "custom": "custom", "levels": "Levels (left \u2192 right): ", "reliability": "Reliability",
+   "rel_low": "Low", "rel_med": "Medium", "rel_high": "High",
    "rel_tip": "Heuristic based on how many features you set (not a statistical confidence interval). More inputs = the prediction rests less on dataset defaults.",
    "dir_more": "more risk", "dir_less": "less risk",
    "tip_score": "Expected value of the risk level (Low=1..Critical=4), weighted by class probabilities.",
@@ -48,22 +46,20 @@ STR = {
  "de": {"app_title": "Portfolio-Risikoanalyse", "configure": "Konfigurieren", "results": "Ergebnisse",
    "portfolios": "Portfolios", "new_portfolio": "Neues Portfolio", "no_portfolios": "Noch keine Portfolios.",
    "no_pf_sel": "Kein Portfolio ausgew\u00e4hlt", "create_pf": "Erstelle ein Portfolio, um zu starten",
-   "create_btn": "Neues Portfolio erstellen", "language": "Sprache",
-   "pf_config": "Portfolio-Konfiguration", "pf_name": "Portfolioname", "added_projects": "Hinzugef\u00fcgte Projekte",
-   "project_name": "Projektname", "edit_hint": "Projekt anklicken, um es zu bearbeiten.",
+   "create_btn": "Neues Portfolio erstellen", "pf_config": "Portfolio-Konfiguration", "pf_name": "Portfolioname",
+   "added_projects": "Hinzugef\u00fcgte Projekte", "project_name": "Projektname",
    "min_hint": "Mindestens {n} Merkmale angeben. Je mehr Merkmale gesetzt sind, desto zuverl\u00e4ssiger die Vorhersage.",
-   "single": "Details", "overall": "Gesamt", "add_project": "Projekt hinzuf\u00fcgen", "update_project": "Projekt aktualisieren",
-   "calc": "Ergebnisse berechnen", "warn_min": "Bitte mindestens {n} Merkmale setzen (aktuell {c}).",
-   "warn_add": "Bitte zuerst mindestens ein Projekt hinzuf\u00fcgen.", "risk_results": "Risikobewertung",
-   "pf_summary": "Portfolio-Risiko\u00fcbersicht", "total_risk": "Gesamt-Portfoliorisiko",
+   "single": "Details", "overall": "Gesamt", "add_project": "Projekt hinzuf\u00fcgen", "calc": "Ergebnisse berechnen",
+   "warn_min": "Bitte mindestens {n} Merkmale setzen (aktuell {c}).", "warn_add": "Bitte zuerst mindestens ein Projekt hinzuf\u00fcgen.",
+   "risk_results": "Risikobewertung", "pf_summary": "Portfolio-Risiko\u00fcbersicht", "total_risk": "Gesamt-Portfoliorisiko",
    "p_elev": "P(\u22651 Hochrisikoprojekt)", "exp_high": "Erwartete Anzahl \u2265 High", "projects": "Projekte",
    "breakdown": "Projekt-Risiko im Detail", "no_projects": "Noch keine Projekte. F\u00fcge unter Konfigurieren eins hinzu und berechne.",
    "drivers_up": "ERH\u00d6HT RISIKO", "drivers_down": "SENKT RISIKO",
    "shap_note": "SHAP-Beitrag zum Gesamtrisiko (klassen\u00fcbergreifend risikogewichtet).",
    "default_expl": "Nicht gesetzte Merkmale verwenden den datensatztypischen Wert \u2014 der das Ergebnis trotzdem beeinflusst. Solche Treiber sind mit (Default) markiert.",
-   "set_params": "Gesetzte Merkmale", "no_set": "Keine Merkmale gesetzt.", "exp_score": "Erwartungswert-Score",
-   "features_set": "Merkmal(e) gesetzt", "custom": "eigener Wert", "levels": "Stufen (links \u2192 rechts): ",
-   "reliability": "Zuverl\u00e4ssigkeit", "rel_low": "Gering", "rel_med": "Mittel", "rel_high": "Hoch",
+   "set_params": "Gesetzte Merkmale", "exp_score": "Erwartungswert-Score", "features_set": "Merkmal(e) gesetzt",
+   "custom": "eigener Wert", "levels": "Stufen (links \u2192 rechts): ", "reliability": "Zuverl\u00e4ssigkeit",
+   "rel_low": "Gering", "rel_med": "Mittel", "rel_high": "Hoch",
    "rel_tip": "Heuristik basierend auf der Anzahl gesetzter Merkmale (kein statistisches Konfidenzintervall). Mehr Eingaben = die Vorhersage st\u00fctzt sich weniger auf datensatztypische Standardwerte.",
    "dir_more": "mehr Risiko", "dir_less": "weniger Risiko",
    "tip_score": "Erwartungswert der Risikostufe (Low=1..Critical=4), gewichtet mit den Klassenwahrscheinlichkeiten.",
@@ -113,9 +109,7 @@ VALUE_DE = {
  "Execution": "Ausf\u00fchrung", "Initiation": "Initiierung", "Monitoring": "\u00dcberwachung", "Planning": "Planung",
  "Fully Colocated": "Voll vor Ort", "Fully Remote": "Voll remote", "Partially Colocated": "Teilweise vor Ort"}
 
-# --------------------------------------------------------------------------------------
-# Laden
-# --------------------------------------------------------------------------------------
+
 @st.cache_resource
 def _load():
     model, meta, spec, df = mb.load_all()
@@ -130,34 +124,23 @@ except Exception as e:
 
 st.set_page_config(page_title="Portfolio Risk Assessment", layout="wide", initial_sidebar_state="expanded")
 
+# Minimal-CSS: Theme uebernimmt Widgets; hier nur Rahmen/Feinheiten + lesbarer Aktiv-Button
 st.markdown(f"""
 <style>
- [data-testid="stAppViewContainer"], [data-testid="stMain"] {{ background-color:{BG}; }}
- [data-testid="stHeader"] {{ background:transparent; }}
- [data-testid="stSidebar"] {{ background-color:{PANEL}; border-right:1px solid {BORDER}; }}
  .block-container {{ padding-top:2rem; padding-bottom:4rem; max-width:1050px; }}
- html, body, p, label, span, div {{ color:{TEXT}; }}
- h1,h2,h3 {{ font-weight:600; letter-spacing:-0.01em; color:{TEXT} !important; }}
+ h1,h2,h3 {{ font-weight:600; letter-spacing:-0.01em; }}
  .subtle {{ color:{MUTED}; font-size:0.95rem; }}
  .cat-header {{ color:{HEAD}; text-transform:uppercase; letter-spacing:0.12em; font-size:0.8rem; font-weight:700; }}
  .param-label {{ font-weight:600; font-size:0.88rem; margin:0.5rem 0 0.1rem 0; color:{TEXT}; }}
  .param-label span, .info span {{ cursor:help; }}
  .tick-row {{ display:flex; justify-content:space-between; color:{MUTED}; font-size:0.68rem; margin:-0.3rem 0 0.55rem 0; }}
  .divider {{ height:1px; background:{BORDER}; margin:1rem 0; border:none; }}
- /* sichtbare Rahmen fuer bordered container + expander */
- [data-testid="stVerticalBlockBorderWrapper"] {{ border:1px solid {BORDER} !important; border-radius:10px !important; }}
- [data-testid="stExpander"] details {{ background:{PANEL} !important; border:1px solid {BORDER} !important; border-radius:8px !important; }}
- [data-testid="stExpander"] summary, [data-testid="stExpander"] summary p, [data-testid="stExpander"] summary span {{ color:{TEXT} !important; background:{PANEL} !important; }}
- /* Eingaben dunkel, grauer Rahmen */
- [data-testid="stTextInput"] input, [data-testid="stNumberInput"] input {{ background-color:{PANEL_2} !important; color:{TEXT} !important; border:1px solid {BORDER} !important; border-radius:8px !important; }}
- [data-baseweb="input"], [data-baseweb="base-input"] {{ background-color:{PANEL_2} !important; border-color:{BORDER} !important; }}
- [data-baseweb="select"] > div {{ background-color:{PANEL_2} !important; border-color:{BORDER} !important; color:{TEXT} !important; }}
- [data-baseweb="popover"], [data-baseweb="menu"], ul[role="listbox"] {{ background-color:{PANEL} !important; }}
- [data-baseweb="slider"] div[role="slider"] {{ background-color:{HEAD} !important; }}
- .stButton > button {{ background:{PANEL_2}; color:{TEXT}; border:1px solid {BORDER}; border-radius:8px; font-weight:500; padding:0.35rem 0.8rem; }}
- .stButton > button:hover {{ border-color:{HEAD}; color:{TEXT}; }}
- .stButton > button[kind="primary"] {{ background:{HEAD}; color:{BG}; border-color:{HEAD}; }}
- div[role="radiogroup"] {{ gap:0.3rem; }}
+ /* klar sichtbare Karten-Rahmen + verschachtelte Tiefe */
+ [data-testid="stVerticalBlockBorderWrapper"] {{ border:1px solid {BORDER} !important; border-radius:10px !important; background:{PANEL}; }}
+ [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlockBorderWrapper"] {{ background:{BG}; }}
+ /* aktiver Nav-/Sprach-Button: dunkles Highlight mit HELLEM Text (klarer Kontrast) */
+ .stButton > button[kind="primary"] {{ background:{PANEL_2} !important; color:{TEXT} !important; border:1px solid {HEAD} !important; }}
+ .stButton > button[kind="primary"] p, .stButton > button[kind="primary"] div {{ color:{TEXT} !important; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -168,7 +151,6 @@ ss.setdefault("active", None)
 ss.setdefault("view", "Configure")
 ss.setdefault("draft_id", 0)
 ss.setdefault("pf_counter", 0)
-ss.setdefault("editing", None)     # Index des in Bearbeitung befindlichen Projekts
 MIN_FEATURES = 5
 
 
@@ -198,16 +180,22 @@ def new_portfolio():
     ss.pf_counter += 1
     pid = f"pf{ss.pf_counter}"
     ss.portfolios[pid] = {"name": f"Portfolio {ss.pf_counter}", "projects": []}
-    ss.active, ss.view, ss.editing = pid, "Configure", None
+    ss.active, ss.view = pid, "Configure"
 
 
 # --------------------------------------------------------------------------------------
 # Sidebar
 # --------------------------------------------------------------------------------------
 with st.sidebar:
-    st.markdown(f"#### \U0001F6E1\uFE0F {T('app_title')}")
-    ss.lang = "de" if st.selectbox(T("language"), ["English", "Deutsch"],
-                                   index=0 if ss.lang == "en" else 1) == "Deutsch" else "en"
+    st.markdown(f"<div style='font-size:1.35rem; font-weight:700; color:{TEXT}; margin-bottom:0.5rem;'>"
+                f"\U0001F6E1\uFE0F {T('app_title')}</div>", unsafe_allow_html=True)
+    lc1, lc2, _ = st.columns([0.28, 0.28, 0.44])
+    if lc1.button("\U0001F1EC\U0001F1E7", key="lang_en", use_container_width=True,
+                  type="primary" if ss.lang == "en" else "secondary"):
+        ss.lang = "en"; st.rerun()
+    if lc2.button("\U0001F1E9\U0001F1EA", key="lang_de", use_container_width=True,
+                  type="primary" if ss.lang == "de" else "secondary"):
+        ss.lang = "de"; st.rerun()
     st.markdown("<hr class='divider'>", unsafe_allow_html=True)
     st.markdown(f"**{T('portfolios')}**")
     if st.button("\uFF0B  " + T("new_portfolio"), use_container_width=True):
@@ -216,7 +204,7 @@ with st.sidebar:
         for pid, pf in ss.portfolios.items():
             mark = "\u25CF " if pid == ss.active else "\u25CB "
             if st.button(mark + pf["name"], key=f"sel_{pid}", use_container_width=True):
-                ss.active, ss.editing = pid, None; st.rerun()
+                ss.active = pid; st.rerun()
     else:
         st.caption(T("no_portfolios"))
 
@@ -228,44 +216,39 @@ def _ticks(opts):
     return "<div class='tick-row'>" + "".join(f"<span>{o}</span>" for o in opts) + "</div>"
 
 
+def _grad(d):
+    return (f"to right,{GREEN},{RED}" if d > 0 else f"to right,{RED},{GREEN}")
+
+
 def _mini(feat):
     d = SPEC[feat]["direction"]
     if d == 0:
         return ""
     opts = SPEC[feat]["options"]
     lo, hi = vopt(opts[0]), vopt(opts[-1])
-    if d > 0:
-        tip = f"{lo} \u2192 {T('dir_less')}, {hi} \u2192 {T('dir_more')}"
-        grad = f"to right,{GREEN},{RED}"
-    else:
-        tip = f"{lo} \u2192 {T('dir_more')}, {hi} \u2192 {T('dir_less')}"
-        grad = f"to right,{RED},{GREEN}"
+    tip = (f"{lo} \u2192 {T('dir_less')}, {hi} \u2192 {T('dir_more')}" if d > 0
+           else f"{lo} \u2192 {T('dir_more')}, {hi} \u2192 {T('dir_less')}")
     return (f"<span title='{tip}' style='display:inline-block; width:26px; height:6px; border-radius:3px; "
-            f"vertical-align:middle; margin-left:8px; background:linear-gradient({grad});'></span>")
+            f"vertical-align:middle; margin-left:8px; background:linear-gradient({_grad(d)});'></span>")
+
+
+def _mini_cat(feats):
+    d = sum(SPEC[f]["direction"] for f in feats)
+    d = 1 if d > 0 else (-1 if d < 0 else 0)
+    if d == 0:
+        return ""
+    return (f"<span style='display:inline-block; width:26px; height:6px; border-radius:3px; "
+            f"vertical-align:middle; margin-left:8px; background:linear-gradient({_grad(d)});'></span>")
 
 
 def _tip(feat):
     return T("levels") + ", ".join(vopt(o) for o in SPEC[feat]["options"])
 
 
-def _cat_dir(feats):
-    s = sum(SPEC[f]["direction"] for f in feats)
-    return 1 if s > 0 else (-1 if s < 0 else 0)
-
-
-def _mini_cat(feats):
-    d = _cat_dir(feats)
-    if d == 0:
-        return ""
-    grad = f"to right,{GREEN},{RED}" if d > 0 else f"to right,{RED},{GREEN}"
-    return (f"<span style='display:inline-block; width:26px; height:6px; border-radius:3px; "
-            f"vertical-align:middle; margin-left:8px; background:linear-gradient({grad});'></span>")
-
-
 def reliability(n):
-    if n < 15:  return T("rel_low"), 0.34, "#e5844d"
-    if n < 30:  return T("rel_med"), 0.67, "#d9a441"
-    return T("rel_high"), 1.0, GREEN
+    if n < 15:  return T("rel_low"), "#e5844d"
+    if n < 30:  return T("rel_med"), "#d9a441"
+    return T("rel_high"), GREEN
 
 
 # ======================================================================================
@@ -290,16 +273,13 @@ def render_feature(pid, feat):
                 unsafe_allow_html=True)
     disp = ["N/A"] + [vopt(o) for o in spec["options"]]
     back = {vopt(o): o for o in spec["options"]}
-
     if spec["type"] == "nominal":
         choice = st.selectbox(" ", disp, key=f"in_{pid}_{feat}", label_visibility="collapsed")
         return None if choice == "N/A" else spec["value_map"][back[choice]]
-
     if spec["type"] == "numeric":
         c1, c2 = st.columns([0.76, 0.24])
         with c1:
-            choice = st.select_slider(" ", options=disp, value="N/A", key=f"in_{pid}_{feat}",
-                                      label_visibility="collapsed")
+            choice = st.select_slider(" ", options=disp, value="N/A", key=f"in_{pid}_{feat}", label_visibility="collapsed")
         with c2:
             raw = st.text_input(" ", key=f"num_{pid}_{feat}", placeholder=T("custom"), label_visibility="collapsed")
         st.markdown(_ticks(disp), unsafe_allow_html=True)
@@ -309,7 +289,6 @@ def render_feature(pid, feat):
             except ValueError:
                 pass
         return None if choice == "N/A" else spec["value_map"][back[choice]]
-
     choice = st.select_slider(" ", options=disp, value="N/A", key=f"in_{pid}_{feat}", label_visibility="collapsed")
     st.markdown(_ticks(disp), unsafe_allow_html=True)
     return None if choice == "N/A" else spec["value_map"][back[choice]]
@@ -328,49 +307,24 @@ def render_category_aggregate(pid, crit, feats):
     return {f: SPEC[f]["value_map"][SPEC[f]["options"][round(frac * (len(SPEC[f]["options"]) - 1))]] for f in feats}
 
 
-def load_project_into_draft(proj):
-    """Projektwerte in die (frischen) Draft-Widgets spiegeln."""
-    ss.draft_id += 1
-    pid = ss.draft_id
-    ss[f"pname_{pid}"] = proj["name"]
-    feat_to_cat = {f: c for c, fs in mb.KUB_GROUPS.items() for f in fs}
-    for feat, val in proj["params"].items():
-        if val is None:
-            continue
-        ss[f"tg_{pid}_{feat_to_cat[feat]}"] = True          # Kategorie aufklappen
-        if SPEC[feat]["type"] == "numeric":
-            ss[f"num_{pid}_{feat}"] = str(round(val, 4))
-        else:
-            ss[f"in_{pid}_{feat}"] = vopt(val)
-
-
 def render_configure(pf):
     st.markdown(f"## {T('pf_config')}")
     pf["name"] = st.text_input(T("pf_name"), value=pf["name"])
 
     if pf["projects"]:
-        st.markdown(f"<span class='subtle'>{T('added_projects')} \u00b7 {T('edit_hint')}</span>",
-                    unsafe_allow_html=True)
+        st.markdown(f"<span class='subtle'>{T('added_projects')}</span>", unsafe_allow_html=True)
         for i, proj in enumerate(pf["projects"]):
-            row_l, row_r = st.columns([0.9, 0.1])
-            if row_l.button(proj["name"], key=f"editp_{i}", use_container_width=True):
-                load_project_into_draft(proj)
-                ss.editing = i
-                st.rerun()
-            if row_r.button("\U0001F5D1", key=f"del_{i}", help=T("remove") if False else None):
-                pf["projects"].pop(i)
-                if ss.editing == i:
-                    ss.editing = None
-                st.rerun()
+            row_l, row_r = st.columns([0.88, 0.12])
+            row_l.markdown(f"<div style='padding:0.45rem 0.2rem; color:{TEXT};'>{proj['name']}</div>",
+                           unsafe_allow_html=True)
+            if row_r.button("\U0001F5D1", key=f"del_{i}"):
+                pf["projects"].pop(i); st.rerun()
         st.markdown("<hr class='divider'>", unsafe_allow_html=True)
 
     pid = ss.draft_id
     with st.container(border=True):
-        proj_name = st.text_input(T("project_name"),
-                                  value=ss.get(f"pname_{pid}", f"Project {len(pf['projects']) + 1}"),
-                                  key=f"pname_{pid}")
+        proj_name = st.text_input(T("project_name"), value=f"Project {len(pf['projects']) + 1}", key=f"pname_{pid}")
         st.caption(T("min_hint", n=MIN_FEATURES))
-
         draft = {}
         for crit, feats in mb.KUB_GROUPS.items():
             with st.container(border=True):
@@ -386,21 +340,14 @@ def render_configure(pf):
                     draft.update(render_category_aggregate(pid, crit, feats))
 
     n_set = sum(v is not None for v in draft.values())
-    label = T("update_project") if ss.editing is not None else T("add_project")
     _, a_col, b_col, _ = st.columns([0.26, 0.24, 0.24, 0.26])
     with a_col:
-        if st.button(f"{label} ({n_set})", use_container_width=True, type="primary"):
+        if st.button(f"{T('add_project')} ({n_set})", use_container_width=True, type="primary"):
             if n_set < MIN_FEATURES:
                 st.warning(T("warn_min", n=MIN_FEATURES, c=n_set))
             else:
-                entry = {"name": proj_name, "params": draft}
-                if ss.editing is not None and ss.editing < len(pf["projects"]):
-                    pf["projects"][ss.editing] = entry
-                else:
-                    pf["projects"].append(entry)
-                ss.editing = None
-                ss.draft_id += 1
-                st.rerun()
+                pf["projects"].append({"name": proj_name, "params": draft})
+                ss.draft_id += 1; st.rerun()
     with b_col:
         if st.button(T("calc"), use_container_width=True):
             if not pf["projects"]:
@@ -441,19 +388,15 @@ def _driver_rows(items, maxabs):
 def render_project_details(order, proba, params):
     drivers = mb.explain(CTX, META, params, order, proba)
     pos = [d for d in drivers if d[1] > 0][:5]
-    neg = [d for d in drivers if d[1] < 0]
-    neg = sorted(neg, key=lambda x: x[1])[:5]
+    neg = sorted([d for d in drivers if d[1] < 0], key=lambda x: x[1])[:5]
     maxabs = max([abs(v) for _, v, _ in pos + neg], default=1) or 1
-
     st.markdown(f"<div class='subtle' style='font-size:0.75rem;'>{T('shap_note')}</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='cat-header' style='color:{RED};'>{T('drivers_up')}</div>", unsafe_allow_html=True)
-    st.markdown(_driver_rows(pos, maxabs) or f"<span class='subtle'>\u2014</span>", unsafe_allow_html=True)
+    st.markdown(_driver_rows(pos, maxabs) or "<span class='subtle'>\u2014</span>", unsafe_allow_html=True)
     st.markdown(f"<div class='cat-header' style='color:{GREEN}; margin-top:0.6rem;'>{T('drivers_down')}</div>",
                 unsafe_allow_html=True)
-    st.markdown(_driver_rows(neg, maxabs) or f"<span class='subtle'>\u2014</span>", unsafe_allow_html=True)
+    st.markdown(_driver_rows(neg, maxabs) or "<span class='subtle'>\u2014</span>", unsafe_allow_html=True)
     st.caption(T("default_expl"))
-
-    # gesetzte Parameter, nach Kategorie eingeklappt
     st.markdown(f"<div class='cat-header' style='margin-top:0.8rem;'>{T('set_params')}</div>", unsafe_allow_html=True)
     for crit, feats in mb.KUB_GROUPS.items():
         setf = [(f, params[f]) for f in feats if params.get(f) is not None]
@@ -476,8 +419,7 @@ def render_project_card(i, proj):
     color = LEVEL_COLORS[pred]
     score = mb.expected_score(order, proba)
     n_set = sum(v is not None for v in proj["params"].values())
-    rel_label, rel_frac, rel_col = reliability(n_set)
-
+    rel_label, rel_col = reliability(n_set)
     with st.container(border=True):
         head_l, head_r = st.columns([0.75, 0.25])
         head_l.markdown(f"<div style='font-size:1.1rem; font-weight:600; color:{TEXT};'>{proj['name']}</div>"
@@ -500,11 +442,9 @@ def render_results(pf):
     st.markdown(f"<div class='subtle'>{pf['name']}</div>", unsafe_allow_html=True)
     if not pf["projects"]:
         st.info(T("no_projects")); return
-
     per_project = [mb.predict(MODEL, META, p["params"]) for p in pf["projects"]]
     pm = mb.portfolio_metrics(per_project)
     p_color = LEVEL_COLORS[pm["level"]]
-
     with st.container(border=True):
         st.markdown(
             f"""<div style="font-size:1.1rem; font-weight:600; margin-bottom:1rem; color:{TEXT};">{T('pf_summary')}</div>
@@ -520,16 +460,15 @@ def render_results(pf):
                 <div style="text-align:right;"><div class="subtle">{T('projects')}</div>
                     <div style="font-size:1.5rem; font-weight:600; color:{TEXT};">{pm['n']}</div></div>
             </div>""", unsafe_allow_html=True)
-
     st.markdown(f"### {T('breakdown')}")
     for i, proj in enumerate(pf["projects"]):
         render_project_card(i, proj)
 
 
 # ======================================================================================
-# ROUTER (segmentierte Navigation, mittig)
+# ROUTER (mittige Segment-Navigation aus zwei abgerundeten Buttons)
 # ======================================================================================
-_, mid, _ = st.columns([0.35, 0.3, 0.35])
+_, mid, _ = st.columns([0.36, 0.28, 0.36])
 with mid:
     n1, n2 = st.columns(2)
     if n1.button(T("configure"), use_container_width=True,
