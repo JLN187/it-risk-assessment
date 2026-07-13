@@ -275,8 +275,8 @@ def build_explainer(model, df, n_bg=100):
             "feat_names": list(prep.get_feature_names_out())}
 
 
-def explain(ctx, meta, params, order, proba, top_n=5):
-    """Top-Treiber bzgl. GESAMTRISIKO (klassenuebergreifend risikogewichtet).
+def explain(ctx, meta, params, order, proba, top_n=None):
+    """Treiber bzgl. GESAMTRISIKO (klassenuebergreifend risikogewichtet), absteigend sortiert.
     Rueckgabe: [(feature, risk_signed_value, is_set)]. + = treibt zu mehr Risiko."""
     Xt = ctx["prep"].transform(build_row(params, meta))
     sv = np.array(ctx["explainer"].shap_values(Xt))
@@ -286,11 +286,12 @@ def explain(ctx, meta, params, order, proba, top_n=5):
     else:
         mat = sv[0][None, :]
     ranks = np.array([{"Low": 0, "Medium": 1, "High": 2, "Critical": 3}[c] for c in order], dtype=float)
-    w = ranks - ranks.mean()                     # zentrierte Risikogewichte
-    risk_contrib = w @ mat                        # (n_features,)
+    w = ranks - ranks.mean()
+    risk_contrib = w @ mat
     agg = {}
     for val, name in zip(risk_contrib, ctx["feat_names"]):
         f = _orig_feature(name)
         agg[f] = agg.get(f, 0.0) + float(val)
-    ranked = sorted(agg.items(), key=lambda kv: abs(kv[1]), reverse=True)
-    return [(f, v, params.get(f) is not None) for f, v in ranked][:top_n]
+    ranked = sorted(agg.items(), key=lambda kv: kv[1], reverse=True)  # nach Wert (nicht Betrag)
+    out = [(f, v, params.get(f) is not None) for f, v in ranked]
+    return out[:top_n] if top_n else out
