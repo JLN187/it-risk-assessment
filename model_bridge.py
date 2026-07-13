@@ -276,23 +276,21 @@ def build_explainer(model, df, n_bg=100):
 
 
 def explain(ctx, meta, params, order, proba, top_n=5):
-    """Top-Treiber fuer die vorhergesagte Klasse. Rueckgabe: [(feature, signed_contribution)]."""
+    """Top-Treiber bzgl. GESAMTRISIKO (klassenuebergreifend risikogewichtet).
+    Rueckgabe: [(feature, risk_signed_value, is_set)]. + = treibt zu mehr Risiko."""
     Xt = ctx["prep"].transform(build_row(params, meta))
     sv = np.array(ctx["explainer"].shap_values(Xt))
-    nfeat = len(ctx["feat_names"])
-    pred_idx = int(np.argmax(proba))
-    # Shape auf (n_features,) fuer die vorhergesagte Klasse bringen
+    ncls = len(order)
     if sv.ndim == 3:
-        if sv.shape[0] == len(order):       # (classes, samples, feats)
-            row = sv[pred_idx, 0, :]
-        else:                                # (samples, feats, classes)
-            row = sv[0, :, pred_idx]
+        mat = sv[:, 0, :] if sv.shape[0] == ncls else sv[0].T   # -> (classes, feats)
     else:
-        row = sv[0]
+        mat = sv[0][None, :]
+    ranks = np.array([{"Low": 0, "Medium": 1, "High": 2, "Critical": 3}[c] for c in order], dtype=float)
+    w = ranks - ranks.mean()                     # zentrierte Risikogewichte
+    risk_contrib = w @ mat                        # (n_features,)
     agg = {}
-    for val, name in zip(row, ctx["feat_names"]):
+    for val, name in zip(risk_contrib, ctx["feat_names"]):
         f = _orig_feature(name)
         agg[f] = agg.get(f, 0.0) + float(val)
-    # nur gesetzte Features erklaeren (Defaults sind keine Nutzerangabe)
     ranked = sorted(agg.items(), key=lambda kv: abs(kv[1]), reverse=True)
     return [(f, v, params.get(f) is not None) for f, v in ranked][:top_n]
