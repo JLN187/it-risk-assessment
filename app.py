@@ -127,7 +127,7 @@ st.set_page_config(page_title="Portfolio Risk Assessment", layout="wide", initia
 # Minimal-CSS: Theme uebernimmt Widgets; hier nur Rahmen/Feinheiten + lesbarer Aktiv-Button
 st.markdown(f"""
 <style>
- .block-container {{ padding-top:2rem; padding-bottom:4rem; max-width:1050px; }}
+ .block-container {{ padding-top:4rem; padding-bottom:4rem; max-width:1050px; }}
  h1,h2,h3 {{ font-weight:600; letter-spacing:-0.01em; }}
  .subtle {{ color:{MUTED}; font-size:0.95rem; }}
  .cat-header {{ color:{HEAD}; text-transform:uppercase; letter-spacing:0.12em; font-size:0.8rem; font-weight:700; }}
@@ -282,10 +282,11 @@ def render_feature(pid, feat):
         c1, c2 = st.columns([0.76, 0.24])
         with c1:
             choice = st.select_slider(" ", options=disp, value="N/A", key=f"in_{pid}_{feat}", label_visibility="collapsed")
+        with c1:
+            st.markdown(_ticks(disp), unsafe_allow_html=True)
         with c2:
             raw = st.text_input(" ", key=f"num_{pid}_{feat}", placeholder=T("custom"), label_visibility="collapsed",
                                 help=f"{spec['min']:g} \u2013 {spec['max']:g}")
-        st.markdown(_ticks(disp), unsafe_allow_html=True)
         if raw:
             try:
                 val = float(raw.replace(",", "."))
@@ -369,7 +370,7 @@ def prob_bars(order, proba, pred):
         c = LEVEL_COLORS[cls]
         strong = "font-weight:700;" if cls == pred else "opacity:0.8;"
         rows += (f"<div style='display:flex; align-items:center; gap:0.8rem; margin:0.25rem 0;'>"
-                 f"<div style='width:70px; color:{MUTED}; font-size:0.85rem;'>{cls}</div>"
+                 f"<div style='width:70px; color:{MUTED}; font-size:0.85rem;'>{vopt(cls)}</div>"
                  f"<div style='flex:1; background:{PANEL_2}; border-radius:6px; height:14px;'>"
                  f"<div style='width:{p*100:.1f}%; background:{c}; height:14px; border-radius:6px;'></div></div>"
                  f"<div style='width:52px; text-align:right; color:{c}; {strong} font-size:0.85rem;'>{p:.1%}</div></div>")
@@ -454,7 +455,7 @@ def render_results(pf):
             f"""<div style="font-size:1.1rem; font-weight:600; margin-bottom:1rem; color:{TEXT};">{T('pf_summary')}</div>
             <div class="info" style="display:flex; gap:2.5rem; flex-wrap:wrap;">
                 <div><div class="subtle">{T('total_risk')}</div>
-                    <div style="font-size:1.9rem; font-weight:700; color:{p_color};">{pm['level']}</div></div>
+                    <div style="font-size:1.9rem; font-weight:700; color:{p_color};">{vopt(pm['level'])}</div></div>
                 <div style="margin-left:auto; text-align:right;">
                     <div class="subtle"><span title="{T('tip_elev')}">{T('p_elev')} &#9432;</span></div>
                     <div style="font-size:1.5rem; font-weight:600; color:{TEXT};">{pm['p_at_least_one_elevated']:.0%}</div></div>
