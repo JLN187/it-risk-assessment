@@ -25,7 +25,7 @@ STR = {
    "create_btn": "Create New Portfolio", "pf_config": "Portfolio Configuration", "pf_name": "Portfolio Name",
    "added_projects": "Added Projects", "project_name": "Project Name",
    "min_hint": "Set at least {n} features. The more features you set, the more reliable the prediction.",
-   "single": "Details", "overall": "Overall", "add_project": "Add Project", "calc": "Calculate Results",
+   "single": "Details", "fine_tune": "Set individually", "overall": "Overall", "add_project": "Add Project", "calc": "Calculate Results",
    "warn_min": "Please set at least {n} features (currently {c}).", "warn_add": "Please add at least one project first.",
    "risk_results": "Risk Assessment Results", "pf_summary": "Portfolio Risk Summary", "total_risk": "Total Portfolio Risk",
    "p_elev": "P(\u22651 elevated-risk project)", "exp_high": "Expected # \u2265 High", "projects": "Projects",
@@ -49,7 +49,7 @@ STR = {
    "create_btn": "Neues Portfolio erstellen", "pf_config": "Portfolio-Konfiguration", "pf_name": "Portfolioname",
    "added_projects": "Hinzugef\u00fcgte Projekte", "project_name": "Projektname",
    "min_hint": "Mindestens {n} Merkmale angeben. Je mehr Merkmale gesetzt sind, desto zuverl\u00e4ssiger die Vorhersage.",
-   "single": "Details", "overall": "Gesamt", "add_project": "Projekt hinzuf\u00fcgen", "calc": "Ergebnisse berechnen",
+   "single": "Details", "fine_tune": "Einzeln einstellen", "overall": "Gesamt", "add_project": "Projekt hinzuf\u00fcgen", "calc": "Ergebnisse berechnen",
    "warn_min": "Bitte mindestens {n} Merkmale setzen (aktuell {c}).", "warn_add": "Bitte zuerst mindestens ein Projekt hinzuf\u00fcgen.",
    "risk_results": "Risikobewertung", "pf_summary": "Portfolio-Risiko\u00fcbersicht", "total_risk": "Gesamt-Portfoliorisiko",
    "p_elev": "P(\u22651 Hochrisikoprojekt)", "exp_high": "Erwartete Anzahl \u2265 High", "projects": "Projekte",
@@ -141,6 +141,8 @@ st.markdown(f"""
  /* aktiver Nav-/Sprach-Button: dunkles Highlight mit HELLEM Text (klarer Kontrast) */
  .stButton > button[kind="primary"] {{ background:{PANEL_2} !important; color:{TEXT} !important; border:1px solid {HEAD} !important; }}
  .stButton > button[kind="primary"] p, .stButton > button[kind="primary"] div {{ color:{TEXT} !important; }}
+ div[data-baseweb="slider"] div[role="slider"] {{ background:{HEAD} !important; border:2px solid {TEXT} !important; box-shadow:0 0 0 4px rgba(216,213,205,0.20) !important; }}
+ [data-testid="stThumbValue"] {{ color:{TEXT} !important; font-weight:700 !important; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -187,8 +189,8 @@ def new_portfolio():
 # Sidebar
 # --------------------------------------------------------------------------------------
 with st.sidebar:
-    st.markdown(f"<div style='font-size:1.35rem; font-weight:700; color:{TEXT}; margin-bottom:0.5rem;'>"
-                f"\U0001F6E1\uFE0F {T('app_title')}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size:1.3rem; font-weight:700; color:{TEXT}; margin-bottom:0.6rem;'>"
+                f"{T('app_title')}</div>", unsafe_allow_html=True)
     lc1, lc2, _ = st.columns([0.28, 0.28, 0.44])
     if lc1.button("\U0001F1EC\U0001F1E7", key="lang_en", use_container_width=True,
                   type="primary" if ss.lang == "en" else "secondary"):
@@ -281,11 +283,13 @@ def render_feature(pid, feat):
         with c1:
             choice = st.select_slider(" ", options=disp, value="N/A", key=f"in_{pid}_{feat}", label_visibility="collapsed")
         with c2:
-            raw = st.text_input(" ", key=f"num_{pid}_{feat}", placeholder=T("custom"), label_visibility="collapsed")
+            raw = st.text_input(" ", key=f"num_{pid}_{feat}", placeholder=T("custom"), label_visibility="collapsed",
+                                help=f"{spec['min']:g} \u2013 {spec['max']:g}")
         st.markdown(_ticks(disp), unsafe_allow_html=True)
         if raw:
             try:
-                return float(raw.replace(",", "."))
+                val = float(raw.replace(",", "."))
+                return max(spec["min"], min(spec["max"], val))   # auf Slider-Grenzen begrenzen
             except ValueError:
                 pass
         return None if choice == "N/A" else spec["value_map"][back[choice]]
@@ -332,7 +336,7 @@ def render_configure(pf):
                 h1.markdown(f"<div class='cat-header' style='padding-top:0.45rem;'>{CAT(crit)}</div>",
                             unsafe_allow_html=True)
                 with h2:
-                    detailed = st.toggle(T("single"), key=f"tg_{pid}_{crit}")
+                    detailed = st.toggle(T("fine_tune"), key=f"tg_{pid}_{crit}")
                 if detailed:
                     for f in feats:
                         draft[f] = render_feature(pid, f)
@@ -431,7 +435,7 @@ def render_project_card(i, proj):
         head_r.markdown(f"<div style='text-align:right; color:{color}; font-weight:700; font-size:1.05rem;'>{pred}</div>",
                         unsafe_allow_html=True)
         show = head_r.toggle(T("single"), key=f"pdet_{ss.active}_{i}")
-        st.markdown(prob_bars(order, proba, pred), unsafe_allow_html=True)
+        st.markdown(prob_bars(order, proba, pred) + "<div style='height:0.7rem;'></div>", unsafe_allow_html=True)
         if show:
             st.markdown("<hr class='divider'>", unsafe_allow_html=True)
             render_project_details(order, proba, proj["params"])
@@ -468,7 +472,7 @@ def render_results(pf):
 # ======================================================================================
 # ROUTER (mittige Segment-Navigation aus zwei abgerundeten Buttons)
 # ======================================================================================
-_, mid, _ = st.columns([0.36, 0.28, 0.36])
+_, mid, _ = st.columns([0.26, 0.48, 0.26])
 with mid:
     n1, n2 = st.columns(2)
     if n1.button(T("configure"), use_container_width=True,
