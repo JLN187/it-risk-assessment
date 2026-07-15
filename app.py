@@ -155,7 +155,7 @@ st.markdown(f"""
  .subtle {{ color:{MUTED}; font-size:0.95rem; }}
  .cat-header {{ color:{TEXT}; text-transform:uppercase; letter-spacing:0.14em; font-size:0.92rem; font-weight:800;
                  border-left:3px solid {HEAD}; padding-left:0.55rem; display:flex; align-items:center;
-                 min-height:1.75rem; line-height:1.1; }}
+                 min-height:2.4rem; line-height:1; margin:0; }}
  .param-label {{ font-weight:600; font-size:0.88rem; margin:0.5rem 0 0.1rem 0; color:{TEXT}; }}
  .param-label span, .info span {{ cursor:help; }}
  .tick-wrap {{ position:relative; height:28px; margin:-0.5rem 9px 0.35rem 9px; }}
@@ -172,7 +172,11 @@ st.markdown(f"""
  .stButton > button[kind="primary"] {{ background:{PANEL_2} !important; color:{TEXT} !important; border:1px solid {HEAD} !important; }}
  .stButton > button[kind="primary"] p, .stButton > button[kind="primary"] div {{ color:{TEXT} !important; }}
  div[data-baseweb="slider"] div[role="slider"] {{ background:{HEAD} !important; border:2px solid {TEXT} !important; box-shadow:0 0 0 4px rgba(216,213,205,0.20) !important; }}
- [data-testid="stThumbValue"] {{ color:{TEXT} !important; font-weight:700 !important; }}
+ [data-testid="stThumbValue"] {{ color:{TEXT} !important; font-weight:700 !important;
+     background:{PANEL_2} !important; padding:0 5px; border-radius:4px; }}
+ /* Streamlits eigene Min/Max-Beschriftung ausblenden - wir zeichnen eigene Ticks */
+ [data-testid="stSliderTickBar"], [data-testid="stTickBar"] {{ display:none !important; }}
+ [data-testid="stSliderTickBarMin"], [data-testid="stSliderTickBarMax"] {{ display:none !important; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -336,12 +340,22 @@ def _step(f):
     return 0.5
 
 
+def _nice(v, kind):
+    """Auf einen gut lesbaren Grenzwert runden."""
+    if kind == "money":
+        return round(v / 100_000) * 100_000 if v >= 100_000 else round(v / 10_000) * 10_000
+    if kind == "rate":
+        return round(v * 20) / 20
+    if kind == "int":
+        return float(round(v / 5) * 5) if v >= 20 else float(round(v))
+    return round(v * 2) / 2
+
+
 def default_limits(n, sum_feats):
     lim = {}
     for f in sum_feats:
         raw = float(META["defaults"][f]) * max(n, 1) * 1.25
-        st_ = _step(f)
-        lim[f] = round(raw / st_) * st_
+        lim[f] = _nice(raw, SPEC[f].get("kind"))
     lim["Resource_Availability"] = 0.5
     lim["Budget_Utilization_Rate"] = 1.0
     lim["Schedule_Pressure"] = 0.2
@@ -351,10 +365,13 @@ def default_limits(n, sum_feats):
 def render_restrictions(pf):
     r = pf.setdefault("restrictions", {"enabled": False, "limits": {}, "sum_feats": list(SUM_DEFAULT)})
     r.setdefault("sum_feats", list(SUM_DEFAULT))
-    with st.expander(T("restrictions")):
-        r["enabled"] = st.toggle(T("restr_on"), value=r["enabled"], key="restr_toggle")
-        st.caption(T("restr_hint"))
+    with st.container(border=True):
+        h1, h2 = st.columns([0.7, 0.3])
+        h1.markdown(f"<div class='cat-header'>{T('restrictions')}</div>", unsafe_allow_html=True)
+        with h2:
+            r["enabled"] = st.toggle(T("restr_on"), value=r["enabled"], key="restr_toggle")
         if not r["enabled"]:
+            st.caption(T("restr_hint"))
             return
         r["sum_feats"] = st.multiselect(T("restr_a_pick"), SUM_CANDIDATES, default=r["sum_feats"],
                                         format_func=L, key="restr_sumpick")
@@ -513,12 +530,14 @@ def render_configure(pf):
 
     if pf["projects"]:
         st.markdown(f"<span class='subtle'>{T('added_projects')}</span>", unsafe_allow_html=True)
+        pcols = st.columns(4)
         for i, proj in enumerate(pf["projects"]):
-            row_l, row_r = st.columns([0.88, 0.12])
-            row_l.markdown(f"<div style='padding:0.45rem 0.2rem; color:{TEXT};'>{proj['name']}</div>",
-                           unsafe_allow_html=True)
-            if row_r.button("\U0001F5D1", key=f"del_{i}"):
-                pf["projects"].pop(i); st.rerun()
+            with pcols[i % 4]:
+                c1, c2 = st.columns([0.72, 0.28])
+                c1.markdown(f"<div style='padding:0.4rem 0 0 0.1rem; color:{TEXT}; font-size:0.85rem;'>"
+                            f"{proj['name']}</div>", unsafe_allow_html=True)
+                if c2.button("\U0001F5D1", key=f"del_{i}"):
+                    pf["projects"].pop(i); st.rerun()
         st.markdown("<hr class='divider'>", unsafe_allow_html=True)
 
     pid = ss.draft_id
@@ -529,8 +548,7 @@ def render_configure(pf):
         for crit, feats in mb.KUB_GROUPS.items():
             with st.container(border=True):
                 h1, h2 = st.columns([0.7, 0.3])
-                h1.markdown(f"<div class='cat-header' style='padding-top:0.45rem;'>{CAT(crit)}</div>",
-                            unsafe_allow_html=True)
+                h1.markdown(f"<div class='cat-header'>{CAT(crit)}</div>", unsafe_allow_html=True)
                 with h2:
                     detailed = st.toggle(T("fine_tune"), key=f"tg_{pid}_{crit}")
                 if detailed:
@@ -663,8 +681,12 @@ def render_results(pf):
     render_restriction_check(pf)
 
     st.markdown(f"### {T('breakdown')}")
-    for i, proj in enumerate(pf["projects"]):
-        render_project_card(i, proj)
+    projs = list(enumerate(pf["projects"]))
+    for row_start in range(0, len(projs), 2):
+        cols = st.columns(2)
+        for col, (i, proj) in zip(cols, projs[row_start:row_start + 2]):
+            with col:
+                render_project_card(i, proj)
 
 
 # ======================================================================================
