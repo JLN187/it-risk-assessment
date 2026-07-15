@@ -42,7 +42,15 @@ STR = {
    "tip_elev": "Probability that at least one project is High or Critical risk. Assumes projects are independent (probability-tree path).",
    "tip_cnt": "Expected number of projects at High or Critical risk (sum of individual probabilities).",
    "tip_agg": "How much risk this category contributes overall. Each feature in it is set to a matching value (features where a higher value means less risk are mapped inversely).",
-   "load_err": "Model artifacts could not be loaded. Please run masterskript_final.py locally first."},
+   "load_err": "Model artifacts could not be loaded. Please run masterskript_final.py locally first.",
+   "restrictions": "Restrictions", "restr_on": "Apply restrictions",
+   "restr_hint": "Optional. Define portfolio limits; violations are flagged in the results.",
+   "restr_a": "Portfolio totals (max)", "restr_b": "Portfolio averages", "restr_c": "Per-project rule",
+   "restr_c_rule": "Flag projects with regulatory compliance at High or Critical",
+   "restr_check": "Restriction Check", "ok": "OK", "violated": "VIOLATED",
+   "limit": "limit", "actual": "actual", "min_avg": "min avg", "max_avg": "max avg",
+   "flagged": "flagged project(s)", "no_restr": "No restrictions active.",
+   "restr_note": "Values not set by you use the dataset's typical value, consistent with the prediction."},
  "de": {"app_title": "Portfolio-Risikoanalyse", "configure": "Konfigurieren", "results": "Ergebnisse",
    "portfolios": "Portfolios", "new_portfolio": "Neues Portfolio", "no_portfolios": "Noch keine Portfolios.",
    "no_pf_sel": "Kein Portfolio ausgew\u00e4hlt", "create_pf": "Erstelle ein Portfolio, um zu starten",
@@ -66,7 +74,15 @@ STR = {
    "tip_elev": "Wahrscheinlichkeit, dass mindestens ein Projekt High- oder Critical-Risiko hat. Annahme: Projekte unabh\u00e4ngig (Baumdiagramm-Pfad).",
    "tip_cnt": "Erwartete Anzahl Projekte mit High- oder Critical-Risiko (Summe der Einzelwahrscheinlichkeiten).",
    "tip_agg": "Wie viel Risiko diese Kategorie insgesamt beitr\u00e4gt. Jedes Merkmal darin wird auf einen passenden Wert gesetzt (Merkmale, bei denen ein h\u00f6herer Wert weniger Risiko bedeutet, werden gespiegelt abgebildet).",
-   "load_err": "Modell-Artefakte konnten nicht geladen werden. Bitte zuerst masterskript_final.py lokal ausf\u00fchren."},
+   "load_err": "Modell-Artefakte konnten nicht geladen werden. Bitte zuerst masterskript_final.py lokal ausf\u00fchren.",
+   "restrictions": "Restriktionen", "restr_on": "Restriktionen anwenden",
+   "restr_hint": "Optional. Portfolio-Grenzwerte festlegen; Verletzungen werden in den Ergebnissen markiert.",
+   "restr_a": "Portfoliosummen (max)", "restr_b": "Portfoliodurchschnitte", "restr_c": "Einzelprojekt-Regel",
+   "restr_c_rule": "Projekte mit regulatorischen Anforderungen auf Hoch/Kritisch markieren",
+   "restr_check": "Restriktionspr\u00fcfung", "ok": "OK", "violated": "VERLETZT",
+   "limit": "Grenzwert", "actual": "Ist", "min_avg": "Min-\u00d8", "max_avg": "Max-\u00d8",
+   "flagged": "markierte(s) Projekt(e)", "no_restr": "Keine Restriktionen aktiv.",
+   "restr_note": "Nicht gesetzte Werte verwenden den datensatztypischen Wert \u2014 konsistent zur Vorhersage."},
 }
 DE_CAT = {"Complexity": "Komplexit\u00e4t", "Efficiency": "Effizienz", "Risk": "Risiko",
           "Strategy": "Strategie", "Urgency": "Dringlichkeit"}
@@ -130,12 +146,14 @@ st.markdown(f"""
  .block-container {{ padding-top:4rem; padding-bottom:4rem; max-width:1320px; }}
  h1,h2,h3 {{ font-weight:600; letter-spacing:-0.01em; }}
  .subtle {{ color:{MUTED}; font-size:0.95rem; }}
- .cat-header {{ color:{HEAD}; text-transform:uppercase; letter-spacing:0.12em; font-size:0.8rem; font-weight:700; }}
+ .cat-header {{ color:{TEXT}; text-transform:uppercase; letter-spacing:0.14em; font-size:0.92rem; font-weight:800;
+                 border-left:3px solid {HEAD}; padding-left:0.55rem; }}
  .param-label {{ font-weight:600; font-size:0.88rem; margin:0.5rem 0 0.1rem 0; color:{TEXT}; }}
  .param-label span, .info span {{ cursor:help; }}
- .tick-row {{ display:flex; justify-content:space-between; color:{MUTED}; font-size:0.68rem; margin:0 0 0.55rem 0; }}
- .tick-marks {{ display:flex; justify-content:space-between; margin:-0.55rem 6px 0.1rem 6px; }}
- .tick-marks span {{ width:1px; height:6px; background:{BORDER}; display:block; }}
+ .tick-wrap {{ position:relative; height:28px; margin:-0.5rem 0 0.35rem 0; }}
+ .tick {{ position:absolute; transform:translateX(-50%); display:flex; flex-direction:column;
+          align-items:center; font-size:0.68rem; color:{MUTED}; white-space:nowrap; }}
+ .tick i {{ display:block; width:1px; height:5px; background:{BORDER}; margin-bottom:3px; }}
  .divider {{ height:1px; background:{BORDER}; margin:1rem 0; border:none; }}
  /* klar sichtbare Karten-Rahmen + verschachtelte Tiefe */
  [data-testid="stVerticalBlockBorderWrapper"] {{ border:1px solid {BORDER} !important; border-radius:10px !important; background:{PANEL}; }}
@@ -193,7 +211,7 @@ def new_portfolio():
 with st.sidebar:
     st.markdown(f"<div style='font-size:1.3rem; font-weight:700; color:{TEXT}; margin-bottom:0.6rem;'>"
                 f"{T('app_title')}</div>", unsafe_allow_html=True)
-    lc1, lc2, _ = st.columns([0.28, 0.28, 0.44])
+    _lp, lc1, lc2, _lq = st.columns([0.22, 0.28, 0.28, 0.22])
     if lc1.button("\U0001F1EC\U0001F1E7", key="lang_en", use_container_width=True,
                   type="primary" if ss.lang == "en" else "secondary"):
         ss.lang = "en"; st.rerun()
@@ -217,9 +235,12 @@ with st.sidebar:
 # Helper
 # --------------------------------------------------------------------------------------
 def _ticks(opts):
-    marks = "<div class='tick-marks'>" + "".join("<span></span>" for _ in opts) + "</div>"
-    labels = "<div class='tick-row'>" + "".join(f"<span>{o}</span>" for o in opts) + "</div>"
-    return marks + labels
+    n = len(opts)
+    items = ""
+    for i, o in enumerate(opts):
+        left = 0 if n == 1 else i / (n - 1) * 100
+        items += f"<span class='tick' style='left:{left:.4f}%;'><i></i>{o}</span>"
+    return f"<div class='tick-wrap'>{items}</div>"
 
 
 def _grad(d):
@@ -253,6 +274,113 @@ def reliability(n):
     if n < 15:  return T("rel_low"), "#e5844d"
     if n < 30:  return T("rel_med"), "#d9a441"
     return T("rel_high"), GREEN
+
+
+# --------------------------------------------------------------------------------------
+# Restriktionen (angelehnt an Karrenbauer & Breitner 2022, Eq. 4 / Eq. 8)
+# --------------------------------------------------------------------------------------
+SUM_FEATS = ["Team_Size", "Project_Budget_USD", "External_Dependencies_Count"]      # Typ A
+AVG_FEATS = {"Resource_Availability": "min", "Budget_Utilization_Rate": "max",
+             "Schedule_Pressure": "max"}                                            # Typ B
+REG_FEAT  = "Regulatory_Compliance_Level"                                           # Typ C
+
+
+def eff(params, feat):
+    """Effektiver Wert = Nutzereingabe oder datensatztypischer Standardwert (wie beim Modell)."""
+    v = params.get(feat)
+    return META["defaults"][feat] if v is None else v
+
+
+def default_limits(n):
+    lim = {}
+    for f in SUM_FEATS:
+        lim[f] = float(META["defaults"][f]) * max(n, 1) * 1.25
+    lim["Resource_Availability"] = 0.5
+    lim["Budget_Utilization_Rate"] = 1.0
+    lim["Schedule_Pressure"] = 0.2
+    return lim
+
+
+def render_restrictions(pf):
+    r = pf.setdefault("restrictions", {"enabled": False, "limits": {}})
+    with st.container(border=True):
+        h1, h2 = st.columns([0.7, 0.3])
+        h1.markdown(f"<div class='cat-header' style='padding-top:0.45rem;'>{T('restrictions')}</div>",
+                    unsafe_allow_html=True)
+        with h2:
+            r["enabled"] = st.toggle(T("restr_on"), value=r["enabled"], key="restr_toggle")
+        if not r["enabled"]:
+            st.caption(T("restr_hint"))
+            return
+        base = default_limits(len(pf["projects"]))
+        for k, v in base.items():
+            r["limits"].setdefault(k, v)
+
+        st.markdown(f"<div class='param-label'>{T('restr_a')}</div>", unsafe_allow_html=True)
+        cols = st.columns(len(SUM_FEATS))
+        for c, f in zip(cols, SUM_FEATS):
+            with c:
+                r["limits"][f] = st.number_input(L(f), min_value=0.0, value=float(r["limits"][f]),
+                                                 key=f"lim_{f}")
+        st.markdown(f"<div class='param-label'>{T('restr_b')}</div>", unsafe_allow_html=True)
+        cols = st.columns(len(AVG_FEATS))
+        for c, (f, mode) in zip(cols, AVG_FEATS.items()):
+            with c:
+                tag = T("min_avg") if mode == "min" else T("max_avg")
+                r["limits"][f] = st.number_input(f"{L(f)} ({tag})", min_value=0.0,
+                                                 value=float(r["limits"][f]), step=0.05, key=f"lim_{f}")
+        st.markdown(f"<div class='param-label'>{T('restr_c')}</div>", unsafe_allow_html=True)
+        st.caption(T("restr_c_rule"))
+
+
+def check_restrictions(pf):
+    """-> (rows, n_violations). rows: (label, actual_str, limit_str, ok)"""
+    r = pf.get("restrictions", {})
+    if not r.get("enabled"):
+        return [], 0
+    lim, rows, viol = r["limits"], [], 0
+    projs = pf["projects"]
+    for f in SUM_FEATS:                                   # Typ A: Summen
+        total = sum(eff(p["params"], f) for p in projs)
+        ok = total <= lim[f]
+        viol += 0 if ok else 1
+        rows.append((f"[A] {L(f)}", f"{total:,.0f}", f"\u2264 {lim[f]:,.0f}", ok))
+    for f, mode in AVG_FEATS.items():                     # Typ B: Durchschnitte
+        avg = sum(eff(p["params"], f) for p in projs) / max(len(projs), 1)
+        ok = (avg >= lim[f]) if mode == "min" else (avg <= lim[f])
+        viol += 0 if ok else 1
+        sign = "\u2265" if mode == "min" else "\u2264"
+        rows.append((f"[B] {L(f)}", f"{avg:.2f}", f"{sign} {lim[f]:.2f}", ok))
+    flagged = [p["name"] for p in projs                   # Typ C: Einzelprojekt-Regulatorik
+               if str(eff(p["params"], REG_FEAT)) in ("High", "Critical")]
+    ok = len(flagged) == 0
+    viol += 0 if ok else 1
+    rows.append((f"[C] {L(REG_FEAT)}", f"{len(flagged)} {T('flagged')}", "0", ok))
+    return rows, viol
+
+
+def render_restriction_check(pf):
+    rows, viol = check_restrictions(pf)
+    if not rows:
+        return
+    with st.container(border=True):
+        st.markdown(f"<div style='font-size:1.1rem; font-weight:600; color:{TEXT}; margin-bottom:0.7rem;'>"
+                    f"{T('restr_check')}</div>", unsafe_allow_html=True)
+        html = ""
+        for label, actual, limit, ok in rows:
+            c = GREEN if ok else RED
+            badge = T("ok") if ok else T("violated")
+            html += (f"<div style='display:flex; align-items:center; gap:1rem; padding:0.3rem 0;"
+                     f" border-bottom:1px solid {BORDER};'>"
+                     f"<div style='flex:1; color:{TEXT}; font-size:0.85rem;'>{label}</div>"
+                     f"<div style='width:130px; text-align:right; color:{MUTED}; font-size:0.8rem;'>"
+                     f"{T('actual')}: {actual}</div>"
+                     f"<div style='width:120px; text-align:right; color:{MUTED}; font-size:0.8rem;'>"
+                     f"{T('limit')}: {limit}</div>"
+                     f"<div style='width:80px; text-align:right; color:{c}; font-weight:700; font-size:0.8rem;'>"
+                     f"{badge}</div></div>")
+        st.markdown(html, unsafe_allow_html=True)
+        st.caption(T("restr_note"))
 
 
 # ======================================================================================
@@ -313,6 +441,9 @@ def render_category_aggregate(pid, crit, feats):
     frac = (idx - 1) / (len(disp) - 2)          # 0 = wenig Risiko ... 1 = viel Risiko
     out = {}
     for f in feats:
+        if SPEC[f]["type"] == "nominal":
+            out[f] = None          # keine Rangordnung -> kein "risikoarmer" Wert bestimmbar
+            continue
         o = SPEC[f]["options"]
         # Merkmale, bei denen "hoeher = weniger Risiko" gilt, gespiegelt abbilden
         ff = frac if SPEC[f]["direction"] >= 0 else (1 - frac)
@@ -351,6 +482,8 @@ def render_configure(pf):
                         draft[f] = render_feature(pid, f)
                 else:
                     draft.update(render_category_aggregate(pid, crit, feats))
+
+    render_restrictions(pf)
 
     n_set = sum(v is not None for v in draft.values())
     _, a_col, b_col, _ = st.columns([0.26, 0.24, 0.24, 0.26])
@@ -473,6 +606,8 @@ def render_results(pf):
                 <div style="text-align:right;"><div class="subtle">{T('projects')}</div>
                     <div style="font-size:1.5rem; font-weight:600; color:{TEXT};">{pm['n']}</div></div>
             </div>""", unsafe_allow_html=True)
+    render_restriction_check(pf)
+
     st.markdown(f"### {T('breakdown')}")
     for i, proj in enumerate(pf["projects"]):
         render_project_card(i, proj)
