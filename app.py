@@ -41,7 +41,7 @@ STR = {
    "tip_score": "Expected value of the risk level (Low=1..Critical=4), weighted by class probabilities.",
    "tip_elev": "Probability that at least one project is High or Critical risk. Assumes projects are independent (probability-tree path).",
    "tip_cnt": "Expected number of projects at High or Critical risk (sum of individual probabilities).",
-   "tip_agg": "Sets all features of this category to the chosen level.",
+   "tip_agg": "How much risk this category contributes overall. Each feature in it is set to a matching value (features where a higher value means less risk are mapped inversely).",
    "load_err": "Model artifacts could not be loaded. Please run masterskript_final.py locally first."},
  "de": {"app_title": "Portfolio-Risikoanalyse", "configure": "Konfigurieren", "results": "Ergebnisse",
    "portfolios": "Portfolios", "new_portfolio": "Neues Portfolio", "no_portfolios": "Noch keine Portfolios.",
@@ -65,7 +65,7 @@ STR = {
    "tip_score": "Erwartungswert der Risikostufe (Low=1..Critical=4), gewichtet mit den Klassenwahrscheinlichkeiten.",
    "tip_elev": "Wahrscheinlichkeit, dass mindestens ein Projekt High- oder Critical-Risiko hat. Annahme: Projekte unabh\u00e4ngig (Baumdiagramm-Pfad).",
    "tip_cnt": "Erwartete Anzahl Projekte mit High- oder Critical-Risiko (Summe der Einzelwahrscheinlichkeiten).",
-   "tip_agg": "Setzt alle Merkmale dieser Kategorie auf die gew\u00e4hlte Stufe.",
+   "tip_agg": "Wie viel Risiko diese Kategorie insgesamt beitr\u00e4gt. Jedes Merkmal darin wird auf einen passenden Wert gesetzt (Merkmale, bei denen ein h\u00f6herer Wert weniger Risiko bedeutet, werden gespiegelt abgebildet).",
    "load_err": "Modell-Artefakte konnten nicht geladen werden. Bitte zuerst masterskript_final.py lokal ausf\u00fchren."},
 }
 DE_CAT = {"Complexity": "Komplexit\u00e4t", "Efficiency": "Effizienz", "Risk": "Risiko",
@@ -127,13 +127,15 @@ st.set_page_config(page_title="Portfolio Risk Assessment", layout="wide", initia
 # Minimal-CSS: Theme uebernimmt Widgets; hier nur Rahmen/Feinheiten + lesbarer Aktiv-Button
 st.markdown(f"""
 <style>
- .block-container {{ padding-top:4rem; padding-bottom:4rem; max-width:1050px; }}
+ .block-container {{ padding-top:4rem; padding-bottom:4rem; max-width:1320px; }}
  h1,h2,h3 {{ font-weight:600; letter-spacing:-0.01em; }}
  .subtle {{ color:{MUTED}; font-size:0.95rem; }}
  .cat-header {{ color:{HEAD}; text-transform:uppercase; letter-spacing:0.12em; font-size:0.8rem; font-weight:700; }}
  .param-label {{ font-weight:600; font-size:0.88rem; margin:0.5rem 0 0.1rem 0; color:{TEXT}; }}
  .param-label span, .info span {{ cursor:help; }}
- .tick-row {{ display:flex; justify-content:space-between; color:{MUTED}; font-size:0.68rem; margin:-0.3rem 0 0.55rem 0; }}
+ .tick-row {{ display:flex; justify-content:space-between; color:{MUTED}; font-size:0.68rem; margin:0 0 0.55rem 0; }}
+ .tick-marks {{ display:flex; justify-content:space-between; margin:-0.55rem 6px 0.1rem 6px; }}
+ .tick-marks span {{ width:1px; height:6px; background:{BORDER}; display:block; }}
  .divider {{ height:1px; background:{BORDER}; margin:1rem 0; border:none; }}
  /* klar sichtbare Karten-Rahmen + verschachtelte Tiefe */
  [data-testid="stVerticalBlockBorderWrapper"] {{ border:1px solid {BORDER} !important; border-radius:10px !important; background:{PANEL}; }}
@@ -215,7 +217,9 @@ with st.sidebar:
 # Helper
 # --------------------------------------------------------------------------------------
 def _ticks(opts):
-    return "<div class='tick-row'>" + "".join(f"<span>{o}</span>" for o in opts) + "</div>"
+    marks = "<div class='tick-marks'>" + "".join("<span></span>" for _ in opts) + "</div>"
+    labels = "<div class='tick-row'>" + "".join(f"<span>{o}</span>" for o in opts) + "</div>"
+    return marks + labels
 
 
 def _grad(d):
@@ -235,12 +239,10 @@ def _mini(feat):
 
 
 def _mini_cat(feats):
-    d = sum(SPEC[f]["direction"] for f in feats)
-    d = 1 if d > 0 else (-1 if d < 0 else 0)
-    if d == 0:
-        return ""
-    return (f"<span style='display:inline-block; width:26px; height:6px; border-radius:3px; "
-            f"vertical-align:middle; margin-left:8px; background:linear-gradient({_grad(d)});'></span>")
+    # Aggregat ist immer in Risiko-Semantik: links = wenig Risiko, rechts = viel Risiko
+    return (f"<span title='{T('tip_agg')}' style='display:inline-block; width:26px; height:6px; "
+            f"border-radius:3px; vertical-align:middle; margin-left:8px; "
+            f"background:linear-gradient(to right,{GREEN},{RED});'></span>")
 
 
 def _tip(feat):
@@ -308,8 +310,14 @@ def render_category_aggregate(pid, crit, feats):
     idx = disp.index(choice)
     if idx == 0:
         return {f: None for f in feats}
-    frac = (idx - 1) / (len(disp) - 2)
-    return {f: SPEC[f]["value_map"][SPEC[f]["options"][round(frac * (len(SPEC[f]["options"]) - 1))]] for f in feats}
+    frac = (idx - 1) / (len(disp) - 2)          # 0 = wenig Risiko ... 1 = viel Risiko
+    out = {}
+    for f in feats:
+        o = SPEC[f]["options"]
+        # Merkmale, bei denen "hoeher = weniger Risiko" gilt, gespiegelt abbilden
+        ff = frac if SPEC[f]["direction"] >= 0 else (1 - frac)
+        out[f] = SPEC[f]["value_map"][o[round(ff * (len(o) - 1))]]
+    return out
 
 
 def render_configure(pf):

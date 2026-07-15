@@ -130,18 +130,30 @@ def build_feature_spec(df):
         else:
             s = df[f].dropna()
             kind = _kind(s)
-            qs = np.quantile(s, [0, .25, .5, .75, 1.0])
+            uniq = np.sort(s.unique())
             options, vmap = [], {}
-            for i in range(4):
-                lo, hi = qs[i], qs[i + 1]
-                mask = (s >= lo) & (s <= hi) if i == 3 else (s >= lo) & (s < hi)
-                rep = float(s[mask].median()) if mask.any() else float((lo + hi) / 2)
-                lo_n, hi_n = _round_nice(lo, kind), _round_nice(hi, kind)
-                label = f"{_fmt(lo_n, kind)}\u2013{_fmt(hi_n, kind)}"
-                if label in vmap:                       # Duplikate vermeiden
-                    label += f" ({i+1})"
-                options.append(label)
-                vmap[label] = rep
+            if len(uniq) <= 6:
+                # Wenige Auspraegungen -> echte Werte als Stufen (keine Kunst-Quartile)
+                for u in uniq:
+                    label = _fmt(u, kind)
+                    if label in vmap:
+                        continue
+                    options.append(label)
+                    vmap[label] = float(u)
+            else:
+                edges = np.unique(np.quantile(s, [0, .25, .5, .75, 1.0]))
+                for i in range(len(edges) - 1):
+                    lo, hi = edges[i], edges[i + 1]
+                    last = (i == len(edges) - 2)
+                    mask = (s >= lo) & (s <= hi) if last else (s >= lo) & (s < hi)
+                    rep = float(s[mask].median()) if mask.any() else float((lo + hi) / 2)
+                    lo_n, hi_n = _round_nice(lo, kind), _round_nice(hi, kind)
+                    label = (f"{_fmt(lo_n, kind)}\u2013{_fmt(hi_n, kind)}"
+                             if _fmt(lo_n, kind) != _fmt(hi_n, kind) else _fmt(lo_n, kind))
+                    if label in vmap:
+                        continue
+                    options.append(label)
+                    vmap[label] = rep
             spec[f] = {"type": t, "options": options, "value_map": vmap, "kind": kind,
                        "min": float(s.min()), "max": float(s.max())}
     return spec
