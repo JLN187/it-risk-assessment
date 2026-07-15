@@ -27,6 +27,7 @@ STR = {
    "no_pf_sel": "No Portfolio Selected", "create_pf": "Create a new portfolio to get started",
    "create_btn": "Create New Portfolio", "pf_config": "Portfolio Configuration", "pf_name": "Portfolio Name",
    "portfolio_view": "Portfolio", "project_view": "New project", "no_projects_yet": "No projects added yet.",
+   "project_default": "Project", "choose": "Choose options",
    "tile_total": "Overall portfolio risk", "tile_pelev": "Chance of a high-risk project",
    "tile_exphigh": "Expected high-risk projects", "tile_projects": "Projects in portfolio",
    "tile_restr": "Restrictions violated",
@@ -67,6 +68,7 @@ STR = {
    "no_pf_sel": "Kein Portfolio ausgew\u00e4hlt", "create_pf": "Erstelle ein Portfolio, um zu starten",
    "create_btn": "Neues Portfolio erstellen", "pf_config": "Portfolio-Konfiguration", "pf_name": "Portfolioname",
    "portfolio_view": "Portfolio", "project_view": "Neues Projekt", "no_projects_yet": "Noch keine Projekte hinzugef\u00fcgt.",
+   "project_default": "Projekt", "choose": "Bitte ausw\u00e4hlen",
    "tile_total": "Gesamtrisiko des Portfolios", "tile_pelev": "Wahrscheinlichkeit f\u00fcr ein Hochrisikoprojekt",
    "tile_exphigh": "Erwartete Hochrisikoprojekte", "tile_projects": "Projekte im Portfolio",
    "tile_restr": "Verletzte Restriktionen",
@@ -180,8 +182,14 @@ st.markdown(f"""
  /* klar sichtbare Karten-Rahmen + verschachtelte Tiefe */
  [data-testid="stVerticalBlockBorderWrapper"] {{ border:1px solid {BORDER} !important; border-radius:10px !important; background:{PANEL}; }}
  /* Karten in einer Zeile gleich hoch */
- [data-testid="stHorizontalBlock"] [data-testid="stVerticalBlockBorderWrapper"] {{ height:100%; }}
- [data-testid="stHorizontalBlock"] > div {{ display:flex; flex-direction:column; }}
+ [data-testid="stHorizontalBlock"] {{ align-items:stretch; }}
+ [data-testid="stHorizontalBlock"] > div,
+ [data-testid="stColumn"] {{ display:flex; flex-direction:column; }}
+ [data-testid="stHorizontalBlock"] > div > div,
+ [data-testid="stColumn"] > div {{ flex:1; display:flex; flex-direction:column; }}
+ [data-testid="stHorizontalBlock"] [data-testid="stVerticalBlockBorderWrapper"] {{ flex:1; height:auto; }}
+ .restr-label {{ font-size:0.78rem; color:{TEXT}; min-height:2.7rem; display:flex; align-items:flex-end;
+                 line-height:1.15; margin-bottom:0.2rem; }}
  /* Datei-Upload zentriert */
  [data-testid="stFileUploaderDropzone"] {{ justify-content:center; text-align:center; }}
  [data-testid="stFileUploaderDropzone"] > div {{ display:flex; flex-direction:column; align-items:center; }}
@@ -393,7 +401,7 @@ def render_restrictions(pf):
             st.caption(T("restr_hint"))
             return
         r["sum_feats"] = st.multiselect(T("restr_a_pick"), SUM_CANDIDATES, default=r["sum_feats"],
-                                        format_func=L, key="restr_sumpick")
+                                        format_func=L, key="restr_sumpick", placeholder=T("choose"))
         base = default_limits(len(pf["projects"]), r["sum_feats"])
         for k, v in base.items():
             r["limits"].setdefault(k, v)
@@ -404,8 +412,10 @@ def render_restrictions(pf):
                 with cols[i % len(cols)]:
                     hi = float(SPEC[f]["max"]) * max(len(pf["projects"]), 1)
                     cur = min(float(r["limits"].get(f, base.get(f, 0.0))), hi)
-                    r["limits"][f] = st.number_input(L(f), min_value=0.0, max_value=hi,
-                                                     value=cur, step=_step(f), key=f"lim_{f}")
+                    st.markdown(f"<div class='restr-label'>{L(f)}</div>", unsafe_allow_html=True)
+                    r["limits"][f] = st.number_input(" ", min_value=0.0, max_value=hi, value=cur,
+                                                     step=_step(f), key=f"lim_{f}",
+                                                     label_visibility="collapsed")
         st.markdown(f"<div class='param-label'>{T('restr_b')}</div>", unsafe_allow_html=True)
         cols = st.columns(len(AVG_FEATS))
         for c, (f, mode) in zip(cols, AVG_FEATS.items()):
@@ -413,13 +423,18 @@ def render_restrictions(pf):
                 tag = T("min_avg") if mode == "min" else T("max_avg")
                 lo, hi = float(SPEC[f]["min"]), float(SPEC[f]["max"])
                 cur = min(max(float(r["limits"][f]), lo), hi)
-                if SPEC[f].get("kind") == "rate":              # in Prozent anzeigen (wie die Slider)
-                    val = st.number_input(f"{L(f)} ({tag}, %)", min_value=lo * 100, max_value=hi * 100,
-                                          value=round(cur * 100, 1), step=5.0, key=f"lim_{f}")
+                is_rate = SPEC[f].get("kind") == "rate"
+                st.markdown(f"<div class='restr-label'>{L(f)} ({tag}{', %' if is_rate else ''})</div>",
+                            unsafe_allow_html=True)
+                if is_rate:                                     # in Prozent anzeigen (wie die Slider)
+                    val = st.number_input(" ", min_value=lo * 100, max_value=hi * 100,
+                                          value=round(cur * 100, 1), step=5.0, key=f"lim_{f}",
+                                          label_visibility="collapsed")
                     r["limits"][f] = val / 100
                 else:
-                    r["limits"][f] = st.number_input(f"{L(f)} ({tag})", min_value=lo, max_value=hi,
-                                                     value=cur, step=_step(f), key=f"lim_{f}")
+                    r["limits"][f] = st.number_input(" ", min_value=lo, max_value=hi, value=cur,
+                                                     step=_step(f), key=f"lim_{f}",
+                                                     label_visibility="collapsed")
         st.markdown(f"<div class='param-label'>{T('restr_c')}</div>", unsafe_allow_html=True)
         st.caption(T("restr_c_rule"))
 
@@ -486,7 +501,7 @@ def render_feature(pid, feat):
             st.markdown(_ticks(disp), unsafe_allow_html=True)
         with c2:
             raw = st.text_input(" ", key=f"num_{pid}_{feat}",
-                                placeholder=f"{spec['min']:g}\u2013{spec['max']:g}",
+                                placeholder=spec.get("range_label", ""),
                                 label_visibility="collapsed", help=T("custom"))
         if raw:
             try:
@@ -558,14 +573,28 @@ def open_cat_dialog(pid, crit, feats):
             _body()
 
 
+def open_project_dialog(proj, order, proba):
+    """Popup mit Treibern und gesetzten Merkmalen eines Projekts."""
+    def _body():
+        render_project_details(order, proba, proj["params"])
+    if HAS_DIALOG:
+        @st.dialog(proj["name"], width="large")
+        def _dlg():
+            _body()
+        _dlg()
+    else:
+        with st.expander(proj["name"], expanded=True):
+            _body()
+
+
 def render_category_card(pid, crit, feats, draft):
     key = f"{pid}_{crit}"
     saved = ss.get("catvals", {}).get(key)
     with st.container(border=True):
-        h1, h2 = st.columns([0.45, 0.55])
+        h1, h2 = st.columns([0.82, 0.18])
         h1.markdown(f"<div class='cat-header'>{CAT(crit)}</div>", unsafe_allow_html=True)
         with h2:
-            if st.button(T("fine_tune"), key=f"btn_{key}", use_container_width=True):
+            if st.button("\u2699", key=f"btn_{key}", help=T("fine_tune"), use_container_width=True):
                 open_cat_dialog(pid, crit, feats)
         if saved is not None:
             n = sum(v is not None for v in saved.values())
@@ -590,21 +619,22 @@ def render_configure(pf):
             if pf["projects"]:
                 st.markdown(f"<div class='param-label'>{T('added_projects')}</div>", unsafe_allow_html=True)
                 for i, proj in enumerate(pf["projects"]):
-                    c1, c2 = st.columns([0.75, 0.25])
+                    c1, c2 = st.columns([0.86, 0.14])
                     c1.markdown(f"<div style='padding:0.42rem 0 0 0.1rem; color:{TEXT}; font-size:0.85rem;'>"
                                 f"{proj['name']}</div>", unsafe_allow_html=True)
-                    if c2.button("\U0001F5D1", key=f"del_{i}"):
+                    if c2.button("\U0001F5D1", key=f"del_{i}", use_container_width=True):
                         pf["projects"].pop(i); st.rerun()
             else:
                 st.caption(T("no_projects_yet"))
-        render_restrictions(pf)
+            render_restrictions(pf)          # Restriktionen gehoeren sichtbar zur Portfolio-Ebene
 
     # ---------------- Project View (rechts) ----------------
     pid = ss.draft_id
     with right:
         with st.container(border=True):
             st.markdown(f"<div class='cat-header'>{T('project_view')}</div>", unsafe_allow_html=True)
-            proj_name = st.text_input(T("project_name"), value=f"Project {len(pf['projects']) + 1}",
+            proj_name = st.text_input(T("project_name"),
+                                      value=f"{T('project_default')} {len(pf['projects']) + 1}",
                                       key=f"pname_{pid}")
             st.caption(T("min_hint", n=MIN_FEATURES))
 
@@ -707,11 +737,11 @@ def render_project_card(i, proj):
                         unsafe_allow_html=True)
         head_r.markdown(f"<div style='text-align:right; color:{color}; font-weight:700; font-size:1.05rem;'>{pred}</div>",
                         unsafe_allow_html=True)
-        show = head_r.toggle(T("single"), key=f"pdet_{ss.active}_{i}")
-        st.markdown(prob_bars(order, proba, pred) + "<div style='height:0.7rem;'></div>", unsafe_allow_html=True)
-        if show:
-            st.markdown("<hr class='divider'>", unsafe_allow_html=True)
-            render_project_details(order, proba, proj["params"])
+        if head_r.button("\u2699", key=f"pdet_{ss.active}_{i}", help=T("single"),
+                         use_container_width=True):
+            open_project_dialog(proj, order, proba)
+        st.markdown(prob_bars(order, proba, pred) + "<div style='height:0.7rem;'></div>",
+                    unsafe_allow_html=True)
 
 
 def _tile(label, value, color, tip=""):
@@ -753,18 +783,17 @@ def render_results(pf):
     rows, viol = check_restrictions(pf)
 
     # ---- Zeile 1: KPI-Kacheln ----
-    k = st.columns(5)
+    k = st.columns(4)
     k[0].markdown(_tile(T("tile_total"), vopt(pm["level"]), p_color), unsafe_allow_html=True)
     k[1].markdown(_tile(T("tile_pelev"), f"{pm['p_at_least_one_elevated']:.0%}", TEXT, T("tip_elev")),
                   unsafe_allow_html=True)
     k[2].markdown(_tile(T("tile_exphigh"), f"{pm['expected_elevated_count']:.1f}", TEXT, T("tip_cnt")),
                   unsafe_allow_html=True)
-    k[3].markdown(_tile(T("tile_projects"), str(pm["n"]), TEXT), unsafe_allow_html=True)
     if rows:
-        k[4].markdown(_tile(T("tile_restr"), f"{viol}" if viol else T("ok"),
+        k[3].markdown(_tile(T("tile_restr"), f"{viol}" if viol else T("ok"),
                             RED if viol else GREEN), unsafe_allow_html=True)
     else:
-        k[4].markdown(_tile(T("tile_restr"), "\u2014", MUTED, T("no_restr")), unsafe_allow_html=True)
+        k[3].markdown(_tile(T("tile_restr"), "\u2014", MUTED, T("no_restr")), unsafe_allow_html=True)
 
     st.markdown("<div style='height:0.7rem;'></div>", unsafe_allow_html=True)
 
@@ -772,7 +801,8 @@ def render_results(pf):
     c1, c2 = st.columns([0.42, 0.58])
     with c1:
         with st.container(border=True):
-            st.markdown(f"<div class='cat-header'>{T('distribution')}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='cat-header'>{T('distribution')} \u00b7 {pm['n']}</div>",
+                        unsafe_allow_html=True)
             st.markdown(_dist_chart(per_project), unsafe_allow_html=True)
     with c2:
         with st.container(border=True):

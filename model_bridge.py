@@ -154,8 +154,12 @@ def build_feature_spec(df):
                         continue
                     options.append(label)
                     vmap[label] = rep
+            # Anzeigebereich exakt wie die Tick-Beschriftungen (sonst widerspricht das Custom-Feld den Stufen)
+            lo_disp = _fmt(_round_nice(float(uniq[0] if len(uniq) <= 6 else s.min()), kind), kind)
+            hi_disp = _fmt(_round_nice(float(uniq[-1] if len(uniq) <= 6 else s.max()), kind), kind)
             spec[f] = {"type": t, "options": options, "value_map": vmap, "kind": kind,
-                       "min": float(s.min()), "max": float(s.max())}
+                       "min": float(s.min()), "max": float(s.max()),
+                       "range_label": f"{lo_disp}\u2013{hi_disp}"}
     return spec
 
 
