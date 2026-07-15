@@ -32,7 +32,9 @@ STR = {
    "tile_restr": "Restrictions violated",
    "added_projects": "Added Projects", "project_name": "Project Name",
    "min_hint": "Set at least {n} features. The more features you set, the more reliable the prediction.",
-   "single": "Details", "fine_tune": "Set individually", "overall": "Overall", "add_project": "Add Project", "calc": "Calculate Results",
+   "single": "Details", "fine_tune": "Set individually", "overall": "Overall",
+   "apply": "Apply", "cancel": "Cancel", "reset_cat": "Back to overall slider",
+   "n_individual": "{n} of {t} features set individually", "add_project": "Add Project", "calc": "Calculate Results",
    "warn_min": "Please set at least {n} features (currently {c}).", "warn_add": "Please add at least one project first.",
    "risk_results": "Risk Assessment Results", "pf_summary": "Portfolio Risk Summary", "total_risk": "Total Portfolio Risk",
    "p_elev": "P(\u22651 elevated-risk project)", "exp_high": "Expected # \u2265 High", "projects": "Projects",
@@ -70,7 +72,9 @@ STR = {
    "tile_restr": "Verletzte Restriktionen",
    "added_projects": "Hinzugef\u00fcgte Projekte", "project_name": "Projektname",
    "min_hint": "Mindestens {n} Merkmale angeben. Je mehr Merkmale gesetzt sind, desto zuverl\u00e4ssiger die Vorhersage.",
-   "single": "Details", "fine_tune": "Einzeln einstellen", "overall": "Gesamt", "add_project": "Projekt hinzuf\u00fcgen", "calc": "Ergebnisse berechnen",
+   "single": "Details", "fine_tune": "Einzeln einstellen", "overall": "Gesamt",
+   "apply": "\u00dcbernehmen", "cancel": "Abbrechen", "reset_cat": "Zur\u00fcck zum Gesamt-Regler",
+   "n_individual": "{n} von {t} Merkmalen einzeln gesetzt", "add_project": "Projekt hinzuf\u00fcgen", "calc": "Ergebnisse berechnen",
    "warn_min": "Bitte mindestens {n} Merkmale setzen (aktuell {c}).", "warn_add": "Bitte zuerst mindestens ein Projekt hinzuf\u00fcgen.",
    "risk_results": "Risikobewertung", "pf_summary": "Portfolio-Risiko\u00fcbersicht", "total_risk": "Gesamt-Portfoliorisiko",
    "p_elev": "P(\u22651 Hochrisikoprojekt)", "exp_high": "Erwartete Anzahl \u2265 High", "projects": "Projekte",
@@ -158,7 +162,7 @@ st.set_page_config(page_title="Portfolio Risk Assessment", layout="wide", initia
 # Minimal-CSS: Theme uebernimmt Widgets; hier nur Rahmen/Feinheiten + lesbarer Aktiv-Button
 st.markdown(f"""
 <style>
- .block-container {{ padding-top:4rem; padding-bottom:4rem; max-width:1500px; }}
+ .block-container {{ padding-top:4rem; padding-bottom:4rem; max-width:1800px; }}
  h1,h2,h3 {{ font-weight:600; letter-spacing:-0.01em; }}
  .subtle {{ color:{MUTED}; font-size:0.95rem; }}
  .cat-header {{ color:{TEXT}; text-transform:uppercase; letter-spacing:0.14em; font-size:0.92rem; font-weight:800;
@@ -176,7 +180,8 @@ st.markdown(f"""
  /* klar sichtbare Karten-Rahmen + verschachtelte Tiefe */
  [data-testid="stVerticalBlockBorderWrapper"] {{ border:1px solid {BORDER} !important; border-radius:10px !important; background:{PANEL}; }}
  /* Karten in einer Zeile gleich hoch */
- [data-testid="stHorizontalBlock"] > div > [data-testid="stVerticalBlockBorderWrapper"] {{ height:100%; }}
+ [data-testid="stHorizontalBlock"] [data-testid="stVerticalBlockBorderWrapper"] {{ height:100%; }}
+ [data-testid="stHorizontalBlock"] > div {{ display:flex; flex-direction:column; }}
  /* Datei-Upload zentriert */
  [data-testid="stFileUploaderDropzone"] {{ justify-content:center; text-align:center; }}
  [data-testid="stFileUploaderDropzone"] > div {{ display:flex; flex-direction:column; align-items:center; }}
@@ -380,7 +385,7 @@ def render_restrictions(pf):
     r = pf.setdefault("restrictions", {"enabled": False, "limits": {}, "sum_feats": list(SUM_DEFAULT)})
     r.setdefault("sum_feats", list(SUM_DEFAULT))
     with st.container(border=True):
-        h1, h2 = st.columns([0.7, 0.3])
+        h1, h2 = st.columns([0.42, 0.58])
         h1.markdown(f"<div class='cat-header'>{T('restrictions')}</div>", unsafe_allow_html=True)
         with h2:
             r["enabled"] = st.toggle(T("restr_on"), value=r["enabled"], key="restr_toggle")
@@ -524,9 +529,58 @@ def render_category_aggregate(pid, crit, feats):
     return out
 
 
+HAS_DIALOG = hasattr(st, "dialog")
+
+
+def open_cat_dialog(pid, crit, feats):
+    """Popup mit allen Merkmalen der Kategorie (kein Springen der Seite)."""
+    def _body():
+        vals = {}
+        cols = st.columns(2)
+        for i, f in enumerate(feats):
+            with cols[i % 2]:
+                vals[f] = render_feature(pid, f)
+        st.markdown("<hr class='divider'>", unsafe_allow_html=True)
+        c1, c2 = st.columns(2)
+        if c1.button(T("apply"), key=f"ap_{pid}_{crit}", type="primary", use_container_width=True):
+            ss.setdefault("catvals", {})[f"{pid}_{crit}"] = vals
+            st.rerun()
+        if c2.button(T("cancel"), key=f"cx_{pid}_{crit}", use_container_width=True):
+            st.rerun()
+
+    if HAS_DIALOG:
+        @st.dialog(CAT(crit), width="large")
+        def _dlg():
+            _body()
+        _dlg()
+    else:                                    # Fallback fuer aeltere Streamlit-Versionen
+        with st.expander(CAT(crit), expanded=True):
+            _body()
+
+
+def render_category_card(pid, crit, feats, draft):
+    key = f"{pid}_{crit}"
+    saved = ss.get("catvals", {}).get(key)
+    with st.container(border=True):
+        h1, h2 = st.columns([0.45, 0.55])
+        h1.markdown(f"<div class='cat-header'>{CAT(crit)}</div>", unsafe_allow_html=True)
+        with h2:
+            if st.button(T("fine_tune"), key=f"btn_{key}", use_container_width=True):
+                open_cat_dialog(pid, crit, feats)
+        if saved is not None:
+            n = sum(v is not None for v in saved.values())
+            st.markdown(f"<div class='subtle' style='font-size:0.82rem; margin:0.4rem 0;'>"
+                        f"{T('n_individual', n=n, t=len(feats))}</div>", unsafe_allow_html=True)
+            if st.button(T("reset_cat"), key=f"rst_{key}", use_container_width=True):
+                ss["catvals"].pop(key, None); st.rerun()
+            draft.update(saved)
+        else:
+            draft.update(render_category_aggregate(pid, crit, feats))
+
+
 def render_configure(pf):
     st.markdown(f"## {T('pf_config')}")
-    left, right = st.columns([0.33, 0.67], gap="medium")
+    left, right = st.columns([0.38, 0.62], gap="medium")
 
     # ---------------- Portfolio View (links) ----------------
     with left:
@@ -560,16 +614,7 @@ def render_configure(pf):
                 cols = st.columns(2)
                 for col, (crit, feats) in zip(cols, crits[rs:rs + 2]):
                     with col:
-                        with st.container(border=True):
-                            h1, h2 = st.columns([0.5, 0.5])
-                            h1.markdown(f"<div class='cat-header'>{CAT(crit)}</div>", unsafe_allow_html=True)
-                            with h2:
-                                detailed = st.toggle(T("fine_tune"), key=f"tg_{pid}_{crit}")
-                            if detailed:
-                                for f in feats:
-                                    draft[f] = render_feature(pid, f)
-                            else:
-                                draft.update(render_category_aggregate(pid, crit, feats))
+                        render_category_card(pid, crit, feats, draft)
 
         n_set = sum(v is not None for v in draft.values())
         _, a_col, b_col, _ = st.columns([0.12, 0.38, 0.38, 0.12])
