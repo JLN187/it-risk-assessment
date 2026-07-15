@@ -26,6 +26,10 @@ STR = {
    "portfolios": "Portfolios", "new_portfolio": "New Portfolio", "no_portfolios": "No portfolios yet.",
    "no_pf_sel": "No Portfolio Selected", "create_pf": "Create a new portfolio to get started",
    "create_btn": "Create New Portfolio", "pf_config": "Portfolio Configuration", "pf_name": "Portfolio Name",
+   "portfolio_view": "Portfolio", "project_view": "New project", "no_projects_yet": "No projects added yet.",
+   "tile_total": "Overall portfolio risk", "tile_pelev": "Chance of a high-risk project",
+   "tile_exphigh": "Expected high-risk projects", "tile_projects": "Projects in portfolio",
+   "tile_restr": "Restrictions violated",
    "added_projects": "Added Projects", "project_name": "Project Name",
    "min_hint": "Set at least {n} features. The more features you set, the more reliable the prediction.",
    "single": "Details", "fine_tune": "Set individually", "overall": "Overall", "add_project": "Add Project", "calc": "Calculate Results",
@@ -60,6 +64,10 @@ STR = {
    "portfolios": "Portfolios", "new_portfolio": "Neues Portfolio", "no_portfolios": "Noch keine Portfolios.",
    "no_pf_sel": "Kein Portfolio ausgew\u00e4hlt", "create_pf": "Erstelle ein Portfolio, um zu starten",
    "create_btn": "Neues Portfolio erstellen", "pf_config": "Portfolio-Konfiguration", "pf_name": "Portfolioname",
+   "portfolio_view": "Portfolio", "project_view": "Neues Projekt", "no_projects_yet": "Noch keine Projekte hinzugef\u00fcgt.",
+   "tile_total": "Gesamtrisiko des Portfolios", "tile_pelev": "Wahrscheinlichkeit f\u00fcr ein Hochrisikoprojekt",
+   "tile_exphigh": "Erwartete Hochrisikoprojekte", "tile_projects": "Projekte im Portfolio",
+   "tile_restr": "Verletzte Restriktionen",
    "added_projects": "Hinzugef\u00fcgte Projekte", "project_name": "Projektname",
    "min_hint": "Mindestens {n} Merkmale angeben. Je mehr Merkmale gesetzt sind, desto zuverl\u00e4ssiger die Vorhersage.",
    "single": "Details", "fine_tune": "Einzeln einstellen", "overall": "Gesamt", "add_project": "Projekt hinzuf\u00fcgen", "calc": "Ergebnisse berechnen",
@@ -150,7 +158,7 @@ st.set_page_config(page_title="Portfolio Risk Assessment", layout="wide", initia
 # Minimal-CSS: Theme uebernimmt Widgets; hier nur Rahmen/Feinheiten + lesbarer Aktiv-Button
 st.markdown(f"""
 <style>
- .block-container {{ padding-top:4rem; padding-bottom:4rem; max-width:1320px; }}
+ .block-container {{ padding-top:4rem; padding-bottom:4rem; max-width:1500px; }}
  h1,h2,h3 {{ font-weight:600; letter-spacing:-0.01em; }}
  .subtle {{ color:{MUTED}; font-size:0.95rem; }}
  .cat-header {{ color:{TEXT}; text-transform:uppercase; letter-spacing:0.14em; font-size:0.92rem; font-weight:800;
@@ -167,6 +175,12 @@ st.markdown(f"""
  .divider {{ height:1px; background:{BORDER}; margin:1rem 0; border:none; }}
  /* klar sichtbare Karten-Rahmen + verschachtelte Tiefe */
  [data-testid="stVerticalBlockBorderWrapper"] {{ border:1px solid {BORDER} !important; border-radius:10px !important; background:{PANEL}; }}
+ /* Karten in einer Zeile gleich hoch */
+ [data-testid="stHorizontalBlock"] > div > [data-testid="stVerticalBlockBorderWrapper"] {{ height:100%; }}
+ /* Datei-Upload zentriert */
+ [data-testid="stFileUploaderDropzone"] {{ justify-content:center; text-align:center; }}
+ [data-testid="stFileUploaderDropzone"] > div {{ display:flex; flex-direction:column; align-items:center; }}
+ [data-testid="stFileUploaderDropzoneInstructions"] {{ align-items:center; text-align:center; }}
  [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlockBorderWrapper"] {{ background:{BG}; }}
  /* aktiver Nav-/Sprach-Button: dunkles Highlight mit HELLEM Text (klarer Kontrast) */
  .stButton > button[kind="primary"] {{ background:{PANEL_2} !important; color:{TEXT} !important; border:1px solid {HEAD} !important; }}
@@ -512,57 +526,66 @@ def render_category_aggregate(pid, crit, feats):
 
 def render_configure(pf):
     st.markdown(f"## {T('pf_config')}")
-    pf["name"] = st.text_input(T("pf_name"), value=pf["name"])
-    render_restrictions(pf)
+    left, right = st.columns([0.33, 0.67], gap="medium")
 
-    if pf["projects"]:
-        st.markdown(f"<span class='subtle'>{T('added_projects')}</span>", unsafe_allow_html=True)
-        pcols = st.columns(4)
-        for i, proj in enumerate(pf["projects"]):
-            with pcols[i % 4]:
-                c1, c2 = st.columns([0.72, 0.28])
-                c1.markdown(f"<div style='padding:0.4rem 0 0 0.1rem; color:{TEXT}; font-size:0.85rem;'>"
-                            f"{proj['name']}</div>", unsafe_allow_html=True)
-                if c2.button("\U0001F5D1", key=f"del_{i}"):
-                    pf["projects"].pop(i); st.rerun()
-        st.markdown("<hr class='divider'>", unsafe_allow_html=True)
+    # ---------------- Portfolio View (links) ----------------
+    with left:
+        with st.container(border=True):
+            st.markdown(f"<div class='cat-header'>{T('portfolio_view')}</div>", unsafe_allow_html=True)
+            pf["name"] = st.text_input(T("pf_name"), value=pf["name"])
+            if pf["projects"]:
+                st.markdown(f"<div class='param-label'>{T('added_projects')}</div>", unsafe_allow_html=True)
+                for i, proj in enumerate(pf["projects"]):
+                    c1, c2 = st.columns([0.75, 0.25])
+                    c1.markdown(f"<div style='padding:0.42rem 0 0 0.1rem; color:{TEXT}; font-size:0.85rem;'>"
+                                f"{proj['name']}</div>", unsafe_allow_html=True)
+                    if c2.button("\U0001F5D1", key=f"del_{i}"):
+                        pf["projects"].pop(i); st.rerun()
+            else:
+                st.caption(T("no_projects_yet"))
+        render_restrictions(pf)
 
+    # ---------------- Project View (rechts) ----------------
     pid = ss.draft_id
-    with st.container(border=True):
-        proj_name = st.text_input(T("project_name"), value=f"Project {len(pf['projects']) + 1}", key=f"pname_{pid}")
-        st.caption(T("min_hint", n=MIN_FEATURES))
-        draft = {}
-        crits = list(mb.KUB_GROUPS.items())
-        for rs in range(0, len(crits), 2):                     # 2-Spalten-Raster
-            cols = st.columns(2)
-            for col, (crit, feats) in zip(cols, crits[rs:rs + 2]):
-                with col:
-                    with st.container(border=True):
-                        h1, h2 = st.columns([0.5, 0.5])
-                        h1.markdown(f"<div class='cat-header'>{CAT(crit)}</div>", unsafe_allow_html=True)
-                        with h2:
-                            detailed = st.toggle(T("fine_tune"), key=f"tg_{pid}_{crit}")
-                        if detailed:
-                            for f in feats:
-                                draft[f] = render_feature(pid, f)
-                        else:
-                            draft.update(render_category_aggregate(pid, crit, feats))
+    with right:
+        with st.container(border=True):
+            st.markdown(f"<div class='cat-header'>{T('project_view')}</div>", unsafe_allow_html=True)
+            proj_name = st.text_input(T("project_name"), value=f"Project {len(pf['projects']) + 1}",
+                                      key=f"pname_{pid}")
+            st.caption(T("min_hint", n=MIN_FEATURES))
 
-    n_set = sum(v is not None for v in draft.values())
-    _, a_col, b_col, _ = st.columns([0.26, 0.24, 0.24, 0.26])
-    with a_col:
-        if st.button(f"{T('add_project')} ({n_set})", use_container_width=True, type="primary"):
-            if n_set < MIN_FEATURES:
-                st.warning(T("warn_min", n=MIN_FEATURES, c=n_set))
-            else:
-                pf["projects"].append({"name": proj_name, "params": draft})
-                ss.draft_id += 1; st.rerun()
-    with b_col:
-        if st.button(T("calc"), use_container_width=True):
-            if not pf["projects"]:
-                st.warning(T("warn_add"))
-            else:
-                ss.view = "Results"; st.rerun()
+            draft = {}
+            crits = list(mb.KUB_GROUPS.items())
+            for rs in range(0, len(crits), 2):                     # 2-Spalten-Raster
+                cols = st.columns(2)
+                for col, (crit, feats) in zip(cols, crits[rs:rs + 2]):
+                    with col:
+                        with st.container(border=True):
+                            h1, h2 = st.columns([0.5, 0.5])
+                            h1.markdown(f"<div class='cat-header'>{CAT(crit)}</div>", unsafe_allow_html=True)
+                            with h2:
+                                detailed = st.toggle(T("fine_tune"), key=f"tg_{pid}_{crit}")
+                            if detailed:
+                                for f in feats:
+                                    draft[f] = render_feature(pid, f)
+                            else:
+                                draft.update(render_category_aggregate(pid, crit, feats))
+
+        n_set = sum(v is not None for v in draft.values())
+        _, a_col, b_col, _ = st.columns([0.12, 0.38, 0.38, 0.12])
+        with a_col:
+            if st.button(f"{T('add_project')} ({n_set})", use_container_width=True, type="primary"):
+                if n_set < MIN_FEATURES:
+                    st.warning(T("warn_min", n=MIN_FEATURES, c=n_set))
+                else:
+                    pf["projects"].append({"name": proj_name, "params": draft})
+                    ss.draft_id += 1; st.rerun()
+        with b_col:
+            if st.button(T("calc"), use_container_width=True):
+                if not pf["projects"]:
+                    st.warning(T("warn_add"))
+                else:
+                    ss.view = "Results"; st.rerun()
 
 
 # ======================================================================================
@@ -686,17 +709,17 @@ def render_results(pf):
 
     # ---- Zeile 1: KPI-Kacheln ----
     k = st.columns(5)
-    k[0].markdown(_tile(T("total_risk"), vopt(pm["level"]), p_color), unsafe_allow_html=True)
-    k[1].markdown(_tile(T("p_elev"), f"{pm['p_at_least_one_elevated']:.0%}", TEXT, T("tip_elev")),
+    k[0].markdown(_tile(T("tile_total"), vopt(pm["level"]), p_color), unsafe_allow_html=True)
+    k[1].markdown(_tile(T("tile_pelev"), f"{pm['p_at_least_one_elevated']:.0%}", TEXT, T("tip_elev")),
                   unsafe_allow_html=True)
-    k[2].markdown(_tile(T("exp_high"), f"{pm['expected_elevated_count']:.1f}", TEXT, T("tip_cnt")),
+    k[2].markdown(_tile(T("tile_exphigh"), f"{pm['expected_elevated_count']:.1f}", TEXT, T("tip_cnt")),
                   unsafe_allow_html=True)
-    k[3].markdown(_tile(T("projects"), str(pm["n"]), TEXT), unsafe_allow_html=True)
+    k[3].markdown(_tile(T("tile_projects"), str(pm["n"]), TEXT), unsafe_allow_html=True)
     if rows:
-        k[4].markdown(_tile(T("restr_check"), f"{viol}" if viol else T("ok"),
+        k[4].markdown(_tile(T("tile_restr"), f"{viol}" if viol else T("ok"),
                             RED if viol else GREEN), unsafe_allow_html=True)
     else:
-        k[4].markdown(_tile(T("restr_check"), "\u2014", MUTED, T("no_restr")), unsafe_allow_html=True)
+        k[4].markdown(_tile(T("tile_restr"), "\u2014", MUTED, T("no_restr")), unsafe_allow_html=True)
 
     st.markdown("<div style='height:0.7rem;'></div>", unsafe_allow_html=True)
 
