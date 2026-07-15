@@ -28,7 +28,8 @@ ORDINAL_ORDERS = {
     "Project_Manager_Experience":  ["Junior PM", "Mid-level PM", "Senior PM", "Certified PM"],
     "Client_Experience_Level":     ["First-time", "Occasional", "Regular", "Strategic"],
 }
-MATURITY_ORDER = ["Basic", "Formal", "Advanced"]
+# "None" = kein Prozess vorhanden -> unterste Rangstufe (KEIN Fehlwert)
+MATURITY_ORDER = ["None", "Basic", "Formal", "Advanced"]
 MATURITY_COLS  = ["Change_Control_Maturity", "Risk_Management_Maturity"]
 NOMINAL_COLS   = ["Methodology_Used", "Funding_Source", "Contract_Type",
                   "Project_Phase", "Team_Colocation"]
@@ -196,7 +197,8 @@ def load_all(model_path="model_pipeline.joblib",
              csv_path="project_risk_raw_dataset.csv"):
     model = joblib.load(model_path)
     meta = joblib.load(meta_path)
-    raw = pd.read_csv(csv_path)
+    # keep_default_na=False: der String "None" bleibt erhalten (Datensatz hat keine Fehlwerte)
+    raw = pd.read_csv(csv_path, keep_default_na=False, na_filter=False)
     raw = raw[raw["Project_Type"] == "IT"]
     risk_rank = raw["Risk_Level"].map({"Low": 0, "Medium": 1, "High": 2, "Critical": 3})
     df = raw.drop(columns=["Project_ID", "Project_Type", "Risk_Level"])
@@ -218,9 +220,7 @@ def build_row(params, meta):
     row = {}
     for f in ALL_FEATURES:
         v = params.get(f)
-        row[f] = (np.nan if f in MATURITY_COLS else meta["defaults"][f]) if v is None else v
-    for c in MATURITY_COLS:
-        row[c + "_missing"] = 1 if params.get(c) is None else 0
+        row[f] = meta["defaults"][f] if v is None else v
     df = pd.DataFrame([row])
     for c in list(ORDINAL_ORDERS) + MATURITY_COLS + NOMINAL_COLS:
         df[c] = df[c].astype(object)
@@ -268,8 +268,6 @@ def portfolio_metrics(per_project):
 # ---------------------------------------------------------------------------
 def _orig_feature(name):
     core = name.split("__", 1)[1]
-    if core.endswith("_missing"):
-        return core[:-len("_missing")]
     if core in ORDINAL_ORDERS or core in MATURITY_COLS:
         return core
     for c in NOMINAL_COLS:
@@ -283,8 +281,6 @@ def build_explainer(model, df, n_bg=100):
     prep = model.named_steps["prep"]
     clf = model.named_steps["clf"]
     bg = df.sample(min(n_bg, len(df)), random_state=42).copy()
-    for c in MATURITY_COLS:
-        bg[c + "_missing"] = bg[c].isna().astype(int)
     Xbg = prep.transform(bg)
     explainer = shap.LinearExplainer(clf, Xbg)
     return {"prep": prep, "explainer": explainer,
