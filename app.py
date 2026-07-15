@@ -52,7 +52,7 @@ STR = {
    "restr_hint": "Optional. Define portfolio limits; violations are flagged in the results.",
    "restr_a_pick": "Which totals to limit", "restr_a": "Portfolio totals (max)", "restr_b": "Portfolio averages", "restr_c": "Per-project rule",
    "restr_c_rule": "Flag projects with regulatory compliance at High or Critical",
-   "restr_check": "Restriction Check", "ok": "OK", "violated": "VIOLATED",
+   "distribution": "Risk distribution", "restr_check": "Restriction Check", "ok": "OK", "violated": "VIOLATED",
    "limit": "limit", "actual": "actual", "min_avg": "min avg", "max_avg": "max avg",
    "flagged": "flagged project(s)", "no_restr": "No restrictions active.",
    "restr_note": "Values not set by you use the dataset's typical value, consistent with the prediction."},
@@ -86,7 +86,7 @@ STR = {
    "restr_hint": "Optional. Portfolio-Grenzwerte festlegen; Verletzungen werden in den Ergebnissen markiert.",
    "restr_a_pick": "Welche Summen begrenzen", "restr_a": "Portfoliosummen (max)", "restr_b": "Portfoliodurchschnitte", "restr_c": "Einzelprojekt-Regel",
    "restr_c_rule": "Projekte mit regulatorischen Anforderungen auf Hoch/Kritisch markieren",
-   "restr_check": "Restriktionspr\u00fcfung", "ok": "OK", "violated": "VERLETZT",
+   "distribution": "Risikoverteilung", "restr_check": "Restriktionspr\u00fcfung", "ok": "OK", "violated": "VERLETZT",
    "limit": "Grenzwert", "actual": "Ist", "min_avg": "Min-\u00d8", "max_avg": "Max-\u00d8",
    "flagged": "markierte(s) Projekt(e)", "no_restr": "Keine Restriktionen aktiv.",
    "restr_note": "Nicht gesetzte Werte verwenden den datensatztypischen Wert \u2014 konsistent zur Vorhersage."},
@@ -383,16 +383,24 @@ def render_restrictions(pf):
             cols = st.columns(min(len(r["sum_feats"]), 3))
             for i, f in enumerate(r["sum_feats"]):
                 with cols[i % len(cols)]:
-                    r["limits"][f] = st.number_input(L(f), min_value=0.0,
-                                                     value=float(r["limits"].get(f, base.get(f, 0.0))),
-                                                     step=_step(f), key=f"lim_{f}")
+                    hi = float(SPEC[f]["max"]) * max(len(pf["projects"]), 1)
+                    cur = min(float(r["limits"].get(f, base.get(f, 0.0))), hi)
+                    r["limits"][f] = st.number_input(L(f), min_value=0.0, max_value=hi,
+                                                     value=cur, step=_step(f), key=f"lim_{f}")
         st.markdown(f"<div class='param-label'>{T('restr_b')}</div>", unsafe_allow_html=True)
         cols = st.columns(len(AVG_FEATS))
         for c, (f, mode) in zip(cols, AVG_FEATS.items()):
             with c:
                 tag = T("min_avg") if mode == "min" else T("max_avg")
-                r["limits"][f] = st.number_input(f"{L(f)} ({tag})", min_value=0.0,
-                                                 value=float(r["limits"][f]), step=0.05, key=f"lim_{f}")
+                lo, hi = float(SPEC[f]["min"]), float(SPEC[f]["max"])
+                cur = min(max(float(r["limits"][f]), lo), hi)
+                if SPEC[f].get("kind") == "rate":              # in Prozent anzeigen (wie die Slider)
+                    val = st.number_input(f"{L(f)} ({tag}, %)", min_value=lo * 100, max_value=hi * 100,
+                                          value=round(cur * 100, 1), step=5.0, key=f"lim_{f}")
+                    r["limits"][f] = val / 100
+                else:
+                    r["limits"][f] = st.number_input(f"{L(f)} ({tag})", min_value=lo, max_value=hi,
+                                                     value=cur, step=_step(f), key=f"lim_{f}")
         st.markdown(f"<div class='param-label'>{T('restr_c')}</div>", unsafe_allow_html=True)
         st.caption(T("restr_c_rule"))
 
@@ -414,37 +422,16 @@ def check_restrictions(pf):
         ok = (avg >= lim[f]) if mode == "min" else (avg <= lim[f])
         viol += 0 if ok else 1
         sign = "\u2265" if mode == "min" else "\u2264"
-        rows.append((f"[B] {L(f)}", f"{avg:.2f}", f"{sign} {lim[f]:.2f}", ok))
+        if SPEC[f].get("kind") == "rate":
+            rows.append((f"[B] {L(f)}", f"{avg*100:.0f}%", f"{sign} {lim[f]*100:.0f}%", ok))
+        else:
+            rows.append((f"[B] {L(f)}", f"{avg:.2f}", f"{sign} {lim[f]:.2f}", ok))
     flagged = [p["name"] for p in projs                   # Typ C: Einzelprojekt-Regulatorik
                if str(eff(p["params"], REG_FEAT)) in ("High", "Critical")]
     ok = len(flagged) == 0
     viol += 0 if ok else 1
     rows.append((f"[C] {L(REG_FEAT)}", f"{len(flagged)} {T('flagged')}", "0", ok))
     return rows, viol
-
-
-def render_restriction_check(pf):
-    rows, viol = check_restrictions(pf)
-    if not rows:
-        return
-    with st.container(border=True):
-        st.markdown(f"<div style='font-size:1.1rem; font-weight:600; color:{TEXT}; margin-bottom:0.7rem;'>"
-                    f"{T('restr_check')}</div>", unsafe_allow_html=True)
-        html = ""
-        for label, actual, limit, ok in rows:
-            c = GREEN if ok else RED
-            badge = T("ok") if ok else T("violated")
-            html += (f"<div style='display:flex; align-items:center; gap:1rem; padding:0.3rem 0;"
-                     f" border-bottom:1px solid {BORDER};'>"
-                     f"<div style='flex:1; color:{TEXT}; font-size:0.85rem;'>{label}</div>"
-                     f"<div style='width:130px; text-align:right; color:{MUTED}; font-size:0.8rem;'>"
-                     f"{T('actual')}: {actual}</div>"
-                     f"<div style='width:120px; text-align:right; color:{MUTED}; font-size:0.8rem;'>"
-                     f"{T('limit')}: {limit}</div>"
-                     f"<div style='width:80px; text-align:right; color:{c}; font-weight:700; font-size:0.8rem;'>"
-                     f"{badge}</div></div>")
-        st.markdown(html, unsafe_allow_html=True)
-        st.caption(T("restr_note"))
 
 
 # ======================================================================================
@@ -545,17 +532,21 @@ def render_configure(pf):
         proj_name = st.text_input(T("project_name"), value=f"Project {len(pf['projects']) + 1}", key=f"pname_{pid}")
         st.caption(T("min_hint", n=MIN_FEATURES))
         draft = {}
-        for crit, feats in mb.KUB_GROUPS.items():
-            with st.container(border=True):
-                h1, h2 = st.columns([0.7, 0.3])
-                h1.markdown(f"<div class='cat-header'>{CAT(crit)}</div>", unsafe_allow_html=True)
-                with h2:
-                    detailed = st.toggle(T("fine_tune"), key=f"tg_{pid}_{crit}")
-                if detailed:
-                    for f in feats:
-                        draft[f] = render_feature(pid, f)
-                else:
-                    draft.update(render_category_aggregate(pid, crit, feats))
+        crits = list(mb.KUB_GROUPS.items())
+        for rs in range(0, len(crits), 2):                     # 2-Spalten-Raster
+            cols = st.columns(2)
+            for col, (crit, feats) in zip(cols, crits[rs:rs + 2]):
+                with col:
+                    with st.container(border=True):
+                        h1, h2 = st.columns([0.5, 0.5])
+                        h1.markdown(f"<div class='cat-header'>{CAT(crit)}</div>", unsafe_allow_html=True)
+                        with h2:
+                            detailed = st.toggle(T("fine_tune"), key=f"tg_{pid}_{crit}")
+                        if detailed:
+                            for f in feats:
+                                draft[f] = render_feature(pid, f)
+                        else:
+                            draft.update(render_category_aggregate(pid, crit, feats))
 
     n_set = sum(v is not None for v in draft.values())
     _, a_col, b_col, _ = st.columns([0.26, 0.24, 0.24, 0.26])
@@ -655,36 +646,91 @@ def render_project_card(i, proj):
             render_project_details(order, proba, proj["params"])
 
 
+def _tile(label, value, color, tip=""):
+    t = f" title='{tip}'" if tip else ""
+    info = " &#9432;" if tip else ""
+    return (f"<div style='background:{PANEL}; border:1px solid {BORDER}; border-radius:10px;"
+            f" padding:0.7rem 0.9rem; height:100%;'>"
+            f"<div class='subtle'{t} style='font-size:0.78rem; cursor:{'help' if tip else 'default'};'>"
+            f"{label}{info}</div>"
+            f"<div style='font-size:1.6rem; font-weight:700; color:{color}; line-height:1.5;'>{value}</div></div>")
+
+
+def _dist_chart(per_project):
+    counts = {c: 0 for c in META["target_order"]}
+    for order, proba in per_project:
+        counts[order[list(proba).index(max(proba))]] += 1
+    total = max(sum(counts.values()), 1)
+    rows = ""
+    for cls, n in counts.items():
+        c = LEVEL_COLORS[cls]
+        rows += (f"<div style='display:flex; align-items:center; gap:0.7rem; margin:0.3rem 0;'>"
+                 f"<div style='width:74px; color:{MUTED}; font-size:0.8rem;'>{vopt(cls)}</div>"
+                 f"<div style='flex:1; background:{PANEL_2}; border-radius:5px; height:12px;'>"
+                 f"<div style='width:{n/total*100:.0f}%; background:{c}; height:12px; border-radius:5px;'></div></div>"
+                 f"<div style='width:26px; text-align:right; color:{TEXT}; font-size:0.8rem; font-weight:600;'>{n}</div>"
+                 f"</div>")
+    return rows
+
+
 def render_results(pf):
     st.markdown(f"## {T('risk_results')}")
     st.markdown(f"<div class='subtle'>{pf['name']}</div>", unsafe_allow_html=True)
     if not pf["projects"]:
         st.info(T("no_projects")); return
+
     per_project = [mb.predict(MODEL, META, p["params"]) for p in pf["projects"]]
     pm = mb.portfolio_metrics(per_project)
     p_color = LEVEL_COLORS[pm["level"]]
-    with st.container(border=True):
-        st.markdown(
-            f"""<div style="font-size:1.1rem; font-weight:600; margin-bottom:1rem; color:{TEXT};">{T('pf_summary')}</div>
-            <div class="info" style="display:flex; gap:2.5rem; flex-wrap:wrap;">
-                <div><div class="subtle">{T('total_risk')}</div>
-                    <div style="font-size:1.9rem; font-weight:700; color:{p_color};">{vopt(pm['level'])}</div></div>
-                <div style="margin-left:auto; text-align:right;">
-                    <div class="subtle"><span title="{T('tip_elev')}">{T('p_elev')} &#9432;</span></div>
-                    <div style="font-size:1.5rem; font-weight:600; color:{TEXT};">{pm['p_at_least_one_elevated']:.0%}</div></div>
-                <div style="text-align:right;">
-                    <div class="subtle"><span title="{T('tip_cnt')}">{T('exp_high')} &#9432;</span></div>
-                    <div style="font-size:1.5rem; font-weight:600; color:{TEXT};">{pm['expected_elevated_count']:.1f}</div></div>
-                <div style="text-align:right;"><div class="subtle">{T('projects')}</div>
-                    <div style="font-size:1.5rem; font-weight:600; color:{TEXT};">{pm['n']}</div></div>
-            </div>""", unsafe_allow_html=True)
-    render_restriction_check(pf)
+    rows, viol = check_restrictions(pf)
 
+    # ---- Zeile 1: KPI-Kacheln ----
+    k = st.columns(5)
+    k[0].markdown(_tile(T("total_risk"), vopt(pm["level"]), p_color), unsafe_allow_html=True)
+    k[1].markdown(_tile(T("p_elev"), f"{pm['p_at_least_one_elevated']:.0%}", TEXT, T("tip_elev")),
+                  unsafe_allow_html=True)
+    k[2].markdown(_tile(T("exp_high"), f"{pm['expected_elevated_count']:.1f}", TEXT, T("tip_cnt")),
+                  unsafe_allow_html=True)
+    k[3].markdown(_tile(T("projects"), str(pm["n"]), TEXT), unsafe_allow_html=True)
+    if rows:
+        k[4].markdown(_tile(T("restr_check"), f"{viol}" if viol else T("ok"),
+                            RED if viol else GREEN), unsafe_allow_html=True)
+    else:
+        k[4].markdown(_tile(T("restr_check"), "\u2014", MUTED, T("no_restr")), unsafe_allow_html=True)
+
+    st.markdown("<div style='height:0.7rem;'></div>", unsafe_allow_html=True)
+
+    # ---- Zeile 2: Verteilung + Restriktionspruefung nebeneinander ----
+    c1, c2 = st.columns([0.42, 0.58])
+    with c1:
+        with st.container(border=True):
+            st.markdown(f"<div class='cat-header'>{T('distribution')}</div>", unsafe_allow_html=True)
+            st.markdown(_dist_chart(per_project), unsafe_allow_html=True)
+    with c2:
+        with st.container(border=True):
+            st.markdown(f"<div class='cat-header'>{T('restr_check')}</div>", unsafe_allow_html=True)
+            if not rows:
+                st.caption(T("no_restr"))
+            else:
+                html = ""
+                for label, actual, limit, ok in rows:
+                    c = GREEN if ok else RED
+                    html += (f"<div style='display:flex; align-items:center; gap:0.6rem; padding:0.22rem 0;"
+                             f" border-bottom:1px solid {BORDER};'>"
+                             f"<div style='flex:1; color:{TEXT}; font-size:0.8rem;'>{label}</div>"
+                             f"<div style='width:110px; text-align:right; color:{MUTED}; font-size:0.75rem;'>{actual}</div>"
+                             f"<div style='width:100px; text-align:right; color:{MUTED}; font-size:0.75rem;'>{limit}</div>"
+                             f"<div style='width:64px; text-align:right; color:{c}; font-weight:700; font-size:0.75rem;'>"
+                             f"{T('ok') if ok else T('violated')}</div></div>")
+                st.markdown(html, unsafe_allow_html=True)
+                st.caption(T("restr_note"))
+
+    # ---- Zeile 3: Projektkarten (2 Spalten) ----
     st.markdown(f"### {T('breakdown')}")
     projs = list(enumerate(pf["projects"]))
-    for row_start in range(0, len(projs), 2):
+    for rs in range(0, len(projs), 2):
         cols = st.columns(2)
-        for col, (i, proj) in zip(cols, projs[row_start:row_start + 2]):
+        for col, (i, proj) in zip(cols, projs[rs:rs + 2]):
             with col:
                 render_project_card(i, proj)
 
