@@ -1,0 +1,60 @@
+# Datei im Repo anlegen unter:  .github/workflows/keepalive.yml
+#
+# Haelt die Streamlit-App wach, indem alle 4 Stunden ein ECHTER Browser die Seite
+# oeffnet (JavaScript + WebSocket) und den Wake-Button klickt, falls die App schlaeft.
+# Ein einfacher HTTP-Ping (z. B. UptimeRobot) reicht dafuer NICHT aus.
+
+name: Keep Streamlit app awake
+
+on:
+  schedule:
+    - cron: "0 */4 * * *"     # alle 4 Stunden (Schlafgrenze liegt bei 12 h -> Puffer)
+  workflow_dispatch:           # erlaubt manuelles Ausloesen ueber den Actions-Tab
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Playwright installieren
+        run: |
+          pip install playwright
+          playwright install --with-deps chromium
+
+      - name: App besuchen und ggf. aufwecken
+        env:
+          APP_URL: "https://it-risk-assessment.streamlit.app/"
+        run: |
+          cat > wake.py << 'EOF'
+          import os
+          from playwright.sync_api import sync_playwright
+
+          url = os.environ["APP_URL"]
+
+          with sync_playwright() as p:
+              browser = p.chromium.launch()
+              page = browser.new_page()
+              page.goto(url, wait_until="networkidle", timeout=90_000)
+
+              # Schlafseite erkennen und Wake-Button klicken
+              try:
+                  btn = page.get_by_text("get this app back up", exact=False)
+                  if btn.count() > 0:
+                      btn.first.click()
+                      print("App schlief -> Wake-Button geklickt, warte auf Start ...")
+                      page.wait_for_timeout(60_000)
+                  else:
+                      print("App war bereits wach.")
+              except Exception as e:
+                  print("Hinweis beim Wake-Versuch:", e)
+
+              # kurz verweilen, damit die WebSocket-Session als Traffic zaehlt
+              page.wait_for_timeout(10_000)
+              print("Titel:", page.title())
+              browser.close()
+          EOF
+          python wake.py
