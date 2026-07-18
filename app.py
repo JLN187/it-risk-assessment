@@ -27,7 +27,10 @@ STR = {
    "no_pf_sel": "No Portfolio Selected", "create_pf": "Create a new portfolio to get started",
    "create_btn": "Create New Portfolio", "pf_config": "Portfolio Configuration", "pf_name": "Portfolio Name",
    "portfolio_view": "Portfolio", "project_view": "New project", "no_projects_yet": "No projects added yet.",
-   "project_default": "Project", "choose": "Choose options",
+   "project_default": "Project", "portfolio_default": "Portfolio", "choose": "Choose options",
+   "more_hint": "The more features you set, the more reliable the prediction.",
+   "warn_one": "Please set at least one feature.",
+   "not_calc": "No results yet. Configure a portfolio and press \u201cCalculate Results\u201d.",
    "tile_total": "Overall portfolio risk", "tile_pelev": "Chance of a high-risk project",
    "tile_exphigh": "Expected high-risk projects", "tile_projects": "Projects in portfolio",
    "tile_restr": "Restrictions violated",
@@ -68,7 +71,10 @@ STR = {
    "no_pf_sel": "Kein Portfolio ausgew\u00e4hlt", "create_pf": "Erstelle ein Portfolio, um zu starten",
    "create_btn": "Neues Portfolio erstellen", "pf_config": "Portfolio-Konfiguration", "pf_name": "Portfolioname",
    "portfolio_view": "Portfolio", "project_view": "Neues Projekt", "no_projects_yet": "Noch keine Projekte hinzugef\u00fcgt.",
-   "project_default": "Projekt", "choose": "Bitte ausw\u00e4hlen",
+   "project_default": "Projekt", "portfolio_default": "Portfolio", "choose": "Bitte ausw\u00e4hlen",
+   "more_hint": "Je mehr Merkmale gesetzt sind, desto zuverl\u00e4ssiger die Vorhersage.",
+   "warn_one": "Bitte mindestens ein Merkmal setzen.",
+   "not_calc": "Noch keine Ergebnisse. Portfolio konfigurieren und \u201eErgebnisse berechnen\u201c dr\u00fccken.",
    "tile_total": "Gesamtrisiko des Portfolios", "tile_pelev": "Wahrscheinlichkeit f\u00fcr ein Hochrisikoprojekt",
    "tile_exphigh": "Erwartete Hochrisikoprojekte", "tile_projects": "Projekte im Portfolio",
    "tile_restr": "Verletzte Restriktionen",
@@ -147,6 +153,57 @@ VALUE_DE = {
  "Fully Colocated": "Voll vor Ort", "Fully Remote": "Voll remote", "Partially Colocated": "Teilweise vor Ort"}
 
 
+EXPL = {
+    "Complexity_Score": ("Gesamtkomplexität des Projekts auf einer Skala von ~2 (sehr einfach) bis 10 (extrem komplex).", "Overall project complexity on a scale from ~2 (very simple) to 10 (extremely complex)."),
+    "Integration_Complexity": ("Aufwand, das System mit bestehenden Systemen zu verbinden (1 = trivial, 10 = sehr aufwendig).", "Effort to integrate the system with existing ones (1 = trivial, 10 = very demanding)."),
+    "Cross_Functional_Dependencies": ("Anzahl abteilungsübergreifender Abhängigkeiten. Mehr = koordinationsintensiver.", "Number of cross-departmental dependencies. More = harder to coordinate."),
+    "External_Dependencies_Count": ("Anzahl Abhängigkeiten von externen Parteien (Lieferanten, Partner).", "Number of dependencies on external parties (vendors, partners)."),
+    "Technology_Familiarity": ("Wie vertraut das Team mit der eingesetzten Technologie ist (Neu bis Experte).", "How familiar the team is with the technology used (New to Expert)."),
+    "Tech_Environment_Stability": ("Zustand der technischen Umgebung (Alt/Instabil bis Modern/Stabil).", "State of the technical environment (Legacy/Unstable to Modern/Stable)."),
+    "Technical_Debt_Level": ("Angesammelte technische Schulden in Prozent (0 % = keine, 100 % = sehr hoch).", "Accumulated technical debt in percent (0% = none, 100% = very high)."),
+    "Requirement_Stability": ("Wie stabil die Anforderungen sind (Volatil bis Stabil).", "How stable the requirements are (Volatile to Stable)."),
+    "Change_Request_Frequency": ("Häufigkeit von Änderungsanfragen (relativer Wert; höher = mehr Änderungen).", "Frequency of change requests (relative value; higher = more changes)."),
+    "Team_Size": ("Anzahl der Teammitglieder.", "Number of team members."),
+    "Stakeholder_Count": ("Anzahl beteiligter Stakeholder. Mehr = abstimmungsintensiver.", "Number of stakeholders involved. More = more coordination."),
+    "Geographical_Distribution": ("Grad der räumlichen Verteilung des Teams (mehr Standorte = höher).", "Degree of geographical distribution of the team (more sites = higher)."),
+    "Project_Budget_USD": ("Gesamtbudget des Projekts.", "Total project budget."),
+    "Budget_Utilization_Rate": ("Anteil des Budgets, der voraussichtlich verbraucht wird (kann über 100 % liegen).", "Share of budget expected to be consumed (can exceed 100%)."),
+    "Estimated_Timeline_Months": ("Geplante Projektdauer in Monaten.", "Planned project duration in months."),
+    "Resource_Availability": ("Verfügbarkeit der benötigten Ressourcen (0 % = keine, 100 % = voll).", "Availability of required resources (0% = none, 100% = full)."),
+    "Resource_Contention_Level": ("Konkurrenz um Ressourcen mit anderen Projekten (Niedrig bis Hoch).", "Competition for resources with other projects (Low to High)."),
+    "Current_Phase_Duration_Months": ("Dauer der aktuellen Projektphase in Monaten.", "Duration of the current project phase in months."),
+    "Communication_Frequency": ("Kommunikationsfrequenz im Projekt (relativer Wert; höher = intensiver).", "Communication frequency in the project (relative value; higher = more intense)."),
+    "Documentation_Quality": ("Qualität der Projektdokumentation (Schlecht bis Ausgezeichnet).", "Quality of project documentation (Poor to Excellent)."),
+    "Org_Process_Maturity": ("Reifegrad der Organisationsprozesse (Ad-hoc bis Optimierend).", "Maturity of organisational processes (Ad-hoc to Optimising)."),
+    "Team_Experience_Level": ("Erfahrungsniveau des Teams (Junior bis Experte).", "Experience level of the team (Junior to Expert)."),
+    "Project_Manager_Experience": ("Erfahrung der Projektleitung (Junior-PM bis zertifiziertes PM).", "Experience of the project manager (Junior PM to Certified PM)."),
+    "Past_Similar_Projects": ("Anzahl früherer ähnlicher Projekte (mehr = mehr Erfahrung).", "Number of past similar projects (more = more experience)."),
+    "Previous_Delivery_Success_Rate": ("Erfolgsquote bisheriger Projektabschlüsse (0 % bis 100 %).", "Success rate of past project deliveries (0% to 100%)."),
+    "Methodology_Used": ("Eingesetztes Vorgehensmodell (Agile, Scrum, Kanban).", "Project methodology used (Agile, Scrum, Kanban)."),
+    "Team_Colocation": ("Räumliche Verteilung des Teams (voll vor Ort bis voll remote).", "Physical distribution of the team (fully colocated to fully remote)."),
+    "Historical_Risk_Incidents": ("Anzahl früherer Risikovorfälle in vergleichbaren Projekten.", "Number of past risk incidents in comparable projects."),
+    "Risk_Management_Maturity": ("Reife des Risikomanagements ('None' = kein Prozess vorhanden).", "Maturity of risk management ('None' = no process in place)."),
+    "Change_Control_Maturity": ("Reife der Änderungssteuerung ('None' = kein Prozess vorhanden).", "Maturity of change control ('None' = no process in place)."),
+    "Vendor_Reliability_Score": ("Zuverlässigkeit externer Dienstleister (0 % bis 100 %).", "Reliability of external vendors (0% to 100%)."),
+    "Team_Turnover_Rate": ("Erwartete Personalfluktuation im Team (0 % bis 100 %).", "Expected team turnover (0% to 100%)."),
+    "Market_Volatility": ("Volatilität des relevanten Marktes (0 % = stabil, 100 % = sehr volatil).", "Volatility of the relevant market (0% = stable, 100% = very volatile)."),
+    "Industry_Volatility": ("Volatilität der Branche (Stabil bis Extrem).", "Volatility of the industry (Stable to Extreme)."),
+    "Regulatory_Compliance_Level": ("Höhe der regulatorischen Anforderungen (Niedrig bis Kritisch).", "Level of regulatory requirements (Low to Critical)."),
+    "Data_Security_Requirements": ("Höhe der Datensicherheitsanforderungen (Niedrig bis Streng).", "Level of data security requirements (Low to Strict)."),
+    "Seasonal_Risk_Factor": ("Saisonaler Risikofaktor (100 % = neutral, 110 % = erhöht).", "Seasonal risk factor (100% = neutral, 110% = elevated)."),
+    "Executive_Sponsorship": ("Rückhalt durch das Management (Schwach bis Stark).", "Backing by executive management (Weak to Strong)."),
+    "Stakeholder_Engagement_Level": ("Einbindung der Stakeholder (Schlecht bis Ausgezeichnet).", "Level of stakeholder engagement (Poor to Excellent)."),
+    "Key_Stakeholder_Availability": ("Verfügbarkeit zentraler Stakeholder (Schlecht bis Ausgezeichnet).", "Availability of key stakeholders (Poor to Excellent)."),
+    "Funding_Source": ("Herkunft der Finanzierung (intern, extern, staatlich, gemischt).", "Source of funding (internal, external, government, mixed)."),
+    "Contract_Type": ("Art des Vertrags (Festpreis, Zeit & Material, Cost-Plus, Hybrid).", "Type of contract (Fixed-Price, Time & Materials, Cost-Plus, Hybrid)."),
+    "Client_Experience_Level": ("Erfahrung des Kunden mit solchen Projekten (Erstmalig bis Strategisch).", "Client's experience with such projects (First-time to Strategic)."),
+    "Organizational_Change_Frequency": ("Häufigkeit organisatorischer Änderungen im Umfeld.", "Frequency of organisational change in the environment."),
+    "Priority_Level": ("Priorität des Projekts (Niedrig bis Kritisch).", "Priority of the project (Low to Critical)."),
+    "Schedule_Pressure": ("Terminlicher Druck (0 % = entspannt, höher = mehr Druck).", "Schedule pressure (0% = relaxed, higher = more pressure)."),
+    "Project_Phase": ("Aktuelle Phase im Projektlebenszyklus (Initiierung bis Abschluss).", "Current phase in the project lifecycle (Initiation to Closure)."),
+    "Project_Start_Month": ("Kalendermonat des Projektstarts (1 = Januar bis 12 = Dezember).", "Calendar month of project start (1 = January to 12 = December)."),
+}
+
 @st.cache_resource
 def _load():
     model, meta, spec, df = mb.load_all()
@@ -188,6 +245,8 @@ st.markdown(f"""
  [data-testid="stHorizontalBlock"] > div > div,
  [data-testid="stColumn"] > div {{ flex:1; display:flex; flex-direction:column; }}
  [data-testid="stHorizontalBlock"] [data-testid="stVerticalBlockBorderWrapper"] {{ flex:1; height:auto; }}
+ .stButton > button {{ font-size:1.02rem; }}
+ [data-testid="stHorizontalBlock"] .stButton > button {{ font-weight:700; }}
  .restr-label {{ font-size:0.78rem; color:{TEXT}; min-height:2.7rem; display:flex; align-items:flex-end;
                  line-height:1.15; margin-bottom:0.2rem; }}
  /* Datei-Upload zentriert */
@@ -214,7 +273,7 @@ ss.setdefault("active", None)
 ss.setdefault("view", "Configure")
 ss.setdefault("draft_id", 0)
 ss.setdefault("pf_counter", 0)
-MIN_FEATURES = 5
+MIN_FEATURES = 1
 
 
 def T(k, **kw):
@@ -332,7 +391,9 @@ def _mini_cat(crit):
 
 
 def _tip(feat):
-    return T("levels") + ", ".join(vopt(o) for o in SPEC[feat]["options"])
+    ex = EXPL.get(feat)
+    lead = (ex[0] if ss.lang == "de" else ex[1]) + " \u2014 " if ex else ""
+    return lead + T("levels") + ", ".join(vopt(o) for o in SPEC[feat]["options"])
 
 
 def reliability(n):
@@ -410,10 +471,13 @@ def render_restrictions(pf):
             cols = st.columns(min(len(r["sum_feats"]), 3))
             for i, f in enumerate(r["sum_feats"]):
                 with cols[i % len(cols)]:
-                    hi = float(SPEC[f]["max"]) * max(len(pf["projects"]), 1)
-                    cur = min(float(r["limits"].get(f, base.get(f, 0.0))), hi)
+                    lo = 1.0 if f == "Team_Size" else 0.0     # >=1 Person bzw. >=0 Euro
+                    unbounded = f in ("Team_Size", "Project_Budget_USD")
+                    hi = None if unbounded else float(SPEC[f]["max"]) * max(len(pf["projects"]), 1)
+                    cur = float(r["limits"].get(f, base.get(f, lo)))
+                    cur = max(cur, lo) if hi is None else min(max(cur, lo), hi)
                     st.markdown(f"<div class='restr-label'>{L(f)}</div>", unsafe_allow_html=True)
-                    r["limits"][f] = st.number_input(" ", min_value=0.0, max_value=hi, value=cur,
+                    r["limits"][f] = st.number_input(" ", min_value=lo, max_value=hi, value=cur,
                                                      step=_step(f), key=f"lim_{f}",
                                                      label_visibility="collapsed")
         st.markdown(f"<div class='param-label'>{T('restr_b')}</div>", unsafe_allow_html=True)
@@ -450,21 +514,21 @@ def check_restrictions(pf):
         total = sum(eff(p["params"], f) for p in projs)
         ok = total <= lim[f]
         viol += 0 if ok else 1
-        rows.append((f"[A] {L(f)}", f"{total:,.0f}", f"\u2264 {lim[f]:,.0f}", ok))
+        rows.append((f"{L(f)}", f"{total:,.0f}", f"\u2264 {lim[f]:,.0f}", ok))
     for f, mode in AVG_FEATS.items():                     # Typ B: Durchschnitte
         avg = sum(eff(p["params"], f) for p in projs) / max(len(projs), 1)
         ok = (avg >= lim[f]) if mode == "min" else (avg <= lim[f])
         viol += 0 if ok else 1
         sign = "\u2265" if mode == "min" else "\u2264"
         if SPEC[f].get("kind") == "rate":
-            rows.append((f"[B] {L(f)}", f"{avg*100:.0f}%", f"{sign} {lim[f]*100:.0f}%", ok))
+            rows.append((f"{L(f)}", f"{avg*100:.0f}%", f"{sign} {lim[f]*100:.0f}%", ok))
         else:
-            rows.append((f"[B] {L(f)}", f"{avg:.2f}", f"{sign} {lim[f]:.2f}", ok))
+            rows.append((f"{L(f)}", f"{avg:.2f}", f"{sign} {lim[f]:.2f}", ok))
     flagged = [p["name"] for p in projs                   # Typ C: Einzelprojekt-Regulatorik
                if str(eff(p["params"], REG_FEAT)) in ("High", "Critical")]
     ok = len(flagged) == 0
     viol += 0 if ok else 1
-    rows.append((f"[C] {L(REG_FEAT)}", f"{len(flagged)} {T('flagged')}", "0", ok))
+    rows.append((f"{L(REG_FEAT)}", f"{len(flagged)} {T('flagged')}", "0", ok))
     return rows, viol
 
 
@@ -591,14 +655,18 @@ def render_category_card(pid, crit, feats, draft):
     key = f"{pid}_{crit}"
     saved = ss.get("catvals", {}).get(key)
     with st.container(border=True):
+        active = saved is not None and any(v is not None for v in saved.values())
         h1, h2 = st.columns([0.82, 0.18])
-        h1.markdown(f"<div class='cat-header'>{CAT(crit)}</div>", unsafe_allow_html=True)
+        badge = " \u2713" if active else ""
+        h1.markdown(f"<div class='cat-header'>{CAT(crit)}"
+                    f"<span style='color:{GREEN};'>{badge}</span></div>", unsafe_allow_html=True)
         with h2:
-            if st.button("\u2699", key=f"btn_{key}", help=T("fine_tune"), use_container_width=True):
+            if st.button("\u2699", key=f"btn_{key}", help=T("fine_tune"), use_container_width=True,
+                         type="primary" if active else "secondary"):
                 open_cat_dialog(pid, crit, feats)
         if saved is not None:
             n = sum(v is not None for v in saved.values())
-            st.markdown(f"<div class='subtle' style='font-size:0.82rem; margin:0.4rem 0;'>"
+            st.markdown(f"<div style='font-size:0.82rem; margin:0.4rem 0; color:{GREEN}; font-weight:600;'>"
                         f"{T('n_individual', n=n, t=len(feats))}</div>", unsafe_allow_html=True)
             if st.button(T("reset_cat"), key=f"rst_{key}", use_container_width=True):
                 ss["catvals"].pop(key, None); st.rerun()
@@ -615,13 +683,16 @@ def render_configure(pf):
     with left:
         with st.container(border=True):
             st.markdown(f"<div class='cat-header'>{T('portfolio_view')}</div>", unsafe_allow_html=True)
-            pf["name"] = st.text_input(T("pf_name"), value=pf["name"])
+            _pfn = st.text_input(T("pf_name"), value="" if pf.get("auto_name") else pf["name"], placeholder=T("portfolio_default"))
+            pf["auto_name"] = not _pfn.strip()
+            pf["name"] = _pfn.strip() or T("portfolio_default")
             if pf["projects"]:
                 st.markdown(f"<div class='param-label'>{T('added_projects')}</div>", unsafe_allow_html=True)
                 for i, proj in enumerate(pf["projects"]):
+                    disp = f"{T('project_default')} {i + 1}" if proj.get("auto") else proj["name"]
                     c1, c2 = st.columns([0.86, 0.14])
                     c1.markdown(f"<div style='padding:0.42rem 0 0 0.1rem; color:{TEXT}; font-size:0.85rem;'>"
-                                f"{proj['name']}</div>", unsafe_allow_html=True)
+                                f"{disp}</div>", unsafe_allow_html=True)
                     if c2.button("\U0001F5D1", key=f"del_{i}", use_container_width=True):
                         pf["projects"].pop(i); st.rerun()
             else:
@@ -636,7 +707,7 @@ def render_configure(pf):
             proj_name = st.text_input(T("project_name"),
                                       value=f"{T('project_default')} {len(pf['projects']) + 1}",
                                       key=f"pname_{pid}")
-            st.caption(T("min_hint", n=MIN_FEATURES))
+            st.caption(T("more_hint"))
 
             draft = {}
             crits = list(mb.KUB_GROUPS.items())
@@ -651,15 +722,18 @@ def render_configure(pf):
         with a_col:
             if st.button(f"{T('add_project')} ({n_set})", use_container_width=True, type="primary"):
                 if n_set < MIN_FEATURES:
-                    st.warning(T("warn_min", n=MIN_FEATURES, c=n_set))
+                    st.warning(T("warn_one"))
                 else:
-                    pf["projects"].append({"name": proj_name, "params": draft})
+                    name = proj_name.strip() or default_proj_name(pf)
+                    pf["projects"].append({"name": name, "params": draft,
+                                           "auto": not proj_name.strip()})
                     ss.draft_id += 1; st.rerun()
         with b_col:
             if st.button(T("calc"), use_container_width=True):
                 if not pf["projects"]:
                     st.warning(T("warn_add"))
                 else:
+                    pf["calculated"] = True
                     ss.view = "Results"; st.rerun()
 
 
@@ -737,8 +811,7 @@ def render_project_card(i, proj):
                         unsafe_allow_html=True)
         head_r.markdown(f"<div style='text-align:right; color:{color}; font-weight:700; font-size:1.05rem;'>{pred}</div>",
                         unsafe_allow_html=True)
-        if head_r.button("\u2699", key=f"pdet_{ss.active}_{i}", help=T("single"),
-                         use_container_width=True):
+        if head_r.toggle(T("single"), key=f"pdet_{ss.active}_{i}"):
             open_project_dialog(proj, order, proba)
         st.markdown(prob_bars(order, proba, pred) + "<div style='height:0.7rem;'></div>",
                     unsafe_allow_html=True)
@@ -776,6 +849,8 @@ def render_results(pf):
     st.markdown(f"<div class='subtle'>{pf['name']}</div>", unsafe_allow_html=True)
     if not pf["projects"]:
         st.info(T("no_projects")); return
+    if not pf.get("calculated"):
+        st.info(T("not_calc")); return
 
     per_project = [mb.predict(MODEL, META, p["params"]) for p in pf["projects"]]
     pm = mb.portfolio_metrics(per_project)
