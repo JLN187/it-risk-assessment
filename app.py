@@ -319,6 +319,10 @@ def vopt(v):
     return VALUE_DE.get(v, v) if ss.lang == "de" else v
 
 
+def default_proj_name(pf):
+    return f"{T('project_default')} {len(pf['projects']) + 1}"
+
+
 def new_portfolio():
     ss.pf_counter += 1
     pid = f"pf{ss.pf_counter}"
