@@ -62,6 +62,7 @@ STR = {
    "restr_hint": "Optional. Define portfolio limits; violations are flagged in the results.",
    "restr_a_pick": "Which totals to limit", "restr_a": "Portfolio totals (max)", "restr_b": "Portfolio averages", "restr_c": "Per-project rule",
    "restr_c_rule": "Flag projects with regulatory compliance at High or Critical",
+   "restr_c_tip": "Regulatory requirements = how strongly the project is subject to laws, standards or audits (e.g. GDPR, ISO, financial supervision). Projects rated High or Critical are flagged because they usually need extra review, documentation and lead time.",
    "distribution": "Risk distribution", "restr_check": "Restriction Check", "ok": "OK", "violated": "VIOLATED",
    "limit": "limit", "actual": "actual", "min_avg": "min avg", "max_avg": "max avg",
    "flagged": "flagged project(s)", "no_restr": "No restrictions active.",
@@ -106,6 +107,7 @@ STR = {
    "restr_hint": "Optional. Portfolio-Grenzwerte festlegen; Verletzungen werden in den Ergebnissen markiert.",
    "restr_a_pick": "Welche Summen begrenzen", "restr_a": "Portfoliosummen (max)", "restr_b": "Portfoliodurchschnitte", "restr_c": "Einzelprojekt-Regel",
    "restr_c_rule": "Projekte mit regulatorischen Anforderungen auf Hoch/Kritisch markieren",
+   "restr_c_tip": "Regulatorische Anforderungen = wie stark das Projekt Gesetzen, Normen oder Pr\u00fcfungen unterliegt (z. B. DSGVO, ISO, Finanzaufsicht). Projekte mit Stufe Hoch oder Kritisch werden markiert, weil sie meist zus\u00e4tzliche Pr\u00fcfungen, Dokumentation und Vorlaufzeit ben\u00f6tigen.",
    "distribution": "Risikoverteilung", "restr_check": "Restriktionspr\u00fcfung", "ok": "OK", "violated": "VERLETZT",
    "limit": "Grenzwert", "actual": "Ist", "min_avg": "Min-\u00d8", "max_avg": "Max-\u00d8",
    "flagged": "markierte(s) Projekt(e)", "no_restr": "Keine Restriktionen aktiv.",
@@ -209,6 +211,22 @@ def _load():
     model, meta, spec, df = mb.load_all()
     return model, meta, spec, mb.build_explainer(model, df)
 
+
+@st.cache_data(show_spinner=False)
+def cached_predict(params_items):
+    """Vorhersage cachen: identische Projekt-Eingaben werden nicht neu berechnet
+    (verhindert Neuaufbau aller Dashboard-Kacheln beim Tab-Wechsel)."""
+    params = dict(params_items)
+    order, proba = mb.predict(MODEL, META, params)
+    return order, tuple(float(x) for x in proba)
+
+
+def predict_proj(params):
+    key = tuple(sorted((k, v) for k, v in params.items() if v is not None))
+    order, proba = cached_predict(key)
+    import numpy as _np
+    return order, _np.array(proba)
+
 try:
     MODEL, META, SPEC, CTX = _load()
     LOAD_ERROR = None
@@ -247,6 +265,9 @@ st.markdown(f"""
  [data-testid="stHorizontalBlock"] [data-testid="stVerticalBlockBorderWrapper"] {{ flex:1; height:auto; }}
  .stButton > button {{ font-size:1.02rem; }}
  [data-testid="stHorizontalBlock"] .stButton > button {{ font-weight:700; }}
+ .nom-warn {{ color:#d9a441; font-size:0.74rem; line-height:1.2; margin:0.1rem 0 0.4rem 0;
+             min-height:2.4rem; overflow:hidden; }}
+ .icon-btn > button {{ font-size:1.15rem !important; font-weight:800 !important; padding:0.2rem 0 !important; }}
  .restr-label {{ font-size:0.78rem; color:{TEXT}; min-height:2.7rem; display:flex; align-items:flex-end;
                  line-height:1.15; margin-bottom:0.2rem; }}
  /* Datei-Upload zentriert */
@@ -499,7 +520,8 @@ def render_restrictions(pf):
                     r["limits"][f] = st.number_input(" ", min_value=lo, max_value=hi, value=cur,
                                                      step=_step(f), key=f"lim_{f}",
                                                      label_visibility="collapsed")
-        st.markdown(f"<div class='param-label'>{T('restr_c')}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='param-label'><span title='{T('restr_c_tip')}'>{T('restr_c')} &#9432;</span></div>",
+                    unsafe_allow_html=True)
         st.caption(T("restr_c_rule"))
 
 
@@ -587,10 +609,12 @@ def render_category_aggregate(pid, crit, feats):
     st.markdown(_ticks(disp), unsafe_allow_html=True)
     idx = disp.index(choice)
     noms = [f for f in feats if SPEC[f]["type"] == "nominal"]
+    # Platz fuer die Warnung immer freihalten -> Karten bleiben gleich hoch
     if idx > 0 and noms:
-        st.markdown(f"<div style='color:{'#d9a441'}; font-size:0.74rem; margin:-0.1rem 0 0.4rem 0;'>"
-                    f"&#9888; {T('nom_warn', names=', '.join(L(f) for f in noms))}</div>",
-                    unsafe_allow_html=True)
+        st.markdown(f"<div class='nom-warn'>&#9888; "
+                    f"{T('nom_warn', names=', '.join(L(f) for f in noms))}</div>", unsafe_allow_html=True)
+    else:
+        st.markdown("<div class='nom-warn'>&nbsp;</div>", unsafe_allow_html=True)
     if idx == 0:
         return {f: None for f in feats}
     frac = (idx - 1) / (len(disp) - 2)              # 0 = wenig von der Kategorie ... 1 = viel
@@ -693,8 +717,11 @@ def render_configure(pf):
                     c1, c2 = st.columns([0.86, 0.14])
                     c1.markdown(f"<div style='padding:0.42rem 0 0 0.1rem; color:{TEXT}; font-size:0.85rem;'>"
                                 f"{disp}</div>", unsafe_allow_html=True)
-                    if c2.button("\U0001F5D1", key=f"del_{i}", use_container_width=True):
-                        pf["projects"].pop(i); st.rerun()
+                    with c2:
+                        st.markdown("<div class='icon-btn'>", unsafe_allow_html=True)
+                        if st.button("\U0001F5D1\uFE0F", key=f"del_{i}", use_container_width=True):
+                            pf["projects"].pop(i); st.rerun()
+                        st.markdown("</div>", unsafe_allow_html=True)
             else:
                 st.caption(T("no_projects_yet"))
             render_restrictions(pf)          # Restriktionen gehoeren sichtbar zur Portfolio-Ebene
@@ -704,9 +731,8 @@ def render_configure(pf):
     with right:
         with st.container(border=True):
             st.markdown(f"<div class='cat-header'>{T('project_view')}</div>", unsafe_allow_html=True)
-            proj_name = st.text_input(T("project_name"),
-                                      value=f"{T('project_default')} {len(pf['projects']) + 1}",
-                                      key=f"pname_{pid}")
+            proj_name = st.text_input(T("project_name"), value="",
+                                      placeholder=default_proj_name(pf), key=f"pname_{pid}")
             st.caption(T("more_hint"))
 
             draft = {}
@@ -795,7 +821,7 @@ def render_project_details(order, proba, params):
 
 
 def render_project_card(i, proj):
-    order, proba = mb.predict(MODEL, META, proj["params"])
+    order, proba = predict_proj(proj["params"])
     pred = order[list(proba).index(max(proba))]
     color = LEVEL_COLORS[pred]
     score = mb.expected_score(order, proba)
@@ -852,7 +878,7 @@ def render_results(pf):
     if not pf.get("calculated"):
         st.info(T("not_calc")); return
 
-    per_project = [mb.predict(MODEL, META, p["params"]) for p in pf["projects"]]
+    per_project = [predict_proj(p["params"]) for p in pf["projects"]]
     pm = mb.portfolio_metrics(per_project)
     p_color = LEVEL_COLORS[pm["level"]]
     rows, viol = check_restrictions(pf)
