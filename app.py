@@ -56,7 +56,7 @@ STR = {
    "tip_cnt": "Expected number of projects at High or Critical risk (sum of individual probabilities).",
    "tip_agg": "How much risk this category contributes overall. Each feature in it is set to a matching value (features where a higher value means less risk are mapped inversely).",
    "load_err": "Model artifacts could not be loaded. Please run masterskript_final.py locally first.",
-   "save_pf": "Save portfolios", "load_pf": "Load portfolios (JSON)", "load_err_pf": "Could not read file.",
+   "language": "Language", "save_pf": "Save portfolios", "load_pf": "Load portfolios (JSON)", "load_err_pf": "Could not read file.",
    "nom_warn": "Not set by this slider (no ranking possible): {names}. Use \u201cSet individually\u201d if needed.",
    "restrictions": "Restrictions", "restr_on": "Apply restrictions",
    "restr_hint": "Optional. Define portfolio limits; violations are flagged in the results.",
@@ -101,7 +101,7 @@ STR = {
    "tip_cnt": "Erwartete Anzahl Projekte mit High- oder Critical-Risiko (Summe der Einzelwahrscheinlichkeiten).",
    "tip_agg": "Wie viel Risiko diese Kategorie insgesamt beitr\u00e4gt. Jedes Merkmal darin wird auf einen passenden Wert gesetzt (Merkmale, bei denen ein h\u00f6herer Wert weniger Risiko bedeutet, werden gespiegelt abgebildet).",
    "load_err": "Modell-Artefakte konnten nicht geladen werden. Bitte zuerst masterskript_final.py lokal ausf\u00fchren.",
-   "save_pf": "Portfolios speichern", "load_pf": "Portfolios laden (JSON)", "load_err_pf": "Datei konnte nicht gelesen werden.",
+   "language": "Sprache", "save_pf": "Portfolios speichern", "load_pf": "Portfolios laden (JSON)", "load_err_pf": "Datei konnte nicht gelesen werden.",
    "nom_warn": "Von diesem Regler nicht gesetzt (keine Rangordnung m\u00f6glich): {names}. Bei Bedarf \u201eEinzeln einstellen\u201c nutzen.",
    "restrictions": "Restriktionen", "restr_on": "Restriktionen anwenden",
    "restr_hint": "Optional. Portfolio-Grenzwerte festlegen; Verletzungen werden in den Ergebnissen markiert.",
@@ -252,6 +252,8 @@ st.markdown(f"""
           align-items:center; font-size:0.66rem; color:{MUTED}; white-space:nowrap; }}
  .tick:first-child {{ transform:translateX(0); align-items:flex-start; }}
  .tick:last-child {{ transform:translateX(-100%); align-items:flex-end; }}
+ .tick-hl {{ color:{TEXT} !important; font-weight:700; }}
+ .tick-hl i {{ background:{HEAD} !important; width:2px !important; height:8px !important; }}
  .tick i {{ display:block; width:1px; height:5px; background:{BORDER}; margin-bottom:3px; }}
  .divider {{ height:1px; background:{BORDER}; margin:1rem 0; border:none; }}
  /* klar sichtbare Karten-Rahmen + verschachtelte Tiefe */
@@ -337,16 +339,9 @@ def new_portfolio():
 # Sidebar
 # --------------------------------------------------------------------------------------
 with st.sidebar:
-    st.markdown(f"<div style='font-size:1.3rem; font-weight:700; color:{TEXT}; margin-bottom:0.6rem; text-align:center;'>"
-                f"{T('app_title')}</div>", unsafe_allow_html=True)
-    _lp, lc1, lc2, _lq = st.columns([0.22, 0.28, 0.28, 0.22])
-    if lc1.button("\U0001F1EC\U0001F1E7", key="lang_en", use_container_width=True,
-                  type="primary" if ss.lang == "en" else "secondary"):
-        ss.lang = "en"; st.rerun()
-    if lc2.button("\U0001F1E9\U0001F1EA", key="lang_de", use_container_width=True,
-                  type="primary" if ss.lang == "de" else "secondary"):
-        ss.lang = "de"; st.rerun()
-    st.markdown("<hr class='divider'>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size:1.35rem; font-weight:700; color:{TEXT}; "
+                f"margin:0.2rem 0 1.1rem 0; text-align:center;'>{T('app_title')}</div>",
+                unsafe_allow_html=True)
     st.markdown(f"**{T('portfolios')}**")
     if st.button("\uFF0B  " + T("new_portfolio"), use_container_width=True):
         new_portfolio(); st.rerun()
@@ -378,16 +373,29 @@ with st.sidebar:
         except Exception:
             st.warning(T("load_err_pf"))
 
+    # Sprachwahl am unteren Rand, damit sie die Ueberschrift nicht bedraengt
+    st.markdown("<hr class='divider'>", unsafe_allow_html=True)
+    st.markdown(f"<div class='subtle' style='font-size:0.78rem; margin-bottom:0.3rem;'>{T('language')}</div>",
+                unsafe_allow_html=True)
+    lc1, lc2 = st.columns(2)
+    if lc1.button("\U0001F1EC\U0001F1E7 EN", key="lang_en", use_container_width=True,
+                  type="primary" if ss.lang == "en" else "secondary"):
+        ss.lang = "en"; st.rerun()
+    if lc2.button("\U0001F1E9\U0001F1EA DE", key="lang_de", use_container_width=True,
+                  type="primary" if ss.lang == "de" else "secondary"):
+        ss.lang = "de"; st.rerun()
+
 
 # --------------------------------------------------------------------------------------
 # Helper
 # --------------------------------------------------------------------------------------
-def _ticks(opts):
+def _ticks(opts, highlight=None):
     n = len(opts)
     items = ""
     for i, o in enumerate(opts):
         left = 0 if n == 1 else i / (n - 1) * 100
-        items += f"<span class='tick' style='left:{left:.4f}%;'><i></i>{o}</span>"
+        cls = "tick tick-hl" if i == highlight else "tick"
+        items += f"<span class='{cls}' style='left:{left:.4f}%;'><i></i>{o}</span>"
     return f"<div class='tick-wrap'>{items}</div>"
 
 
@@ -601,14 +609,12 @@ def render_feature(pid, feat):
                 custom_val = None
         with c1:
             if custom_val is not None:
-                # Slider-Griff auf den zum Custom-Wert nächstgelegenen Checkpoint setzen
+                # Slider-Griff auf den zum Custom-Wert naechstgelegenen Checkpoint setzen
                 reps = [spec["value_map"][o] for o in spec["options"]]
                 nearest = min(range(len(reps)), key=lambda i: abs(reps[i] - custom_val))
                 st.select_slider(" ", options=disp, value=disp[nearest + 1],
-                                 key=f"in_{pid}_{feat}", label_visibility="collapsed", disabled=True)
-                st.markdown(_ticks(disp)
-                            + f"<div style='color:{TEXT}; font-size:0.72rem; margin-top:-0.3rem;'>"
-                              f"= {custom_val:g}</div>", unsafe_allow_html=True)
+                                 key=f"insync_{pid}_{feat}", label_visibility="collapsed", disabled=True)
+                st.markdown(_ticks(disp, highlight=nearest + 1), unsafe_allow_html=True)
             else:
                 choice = st.select_slider(" ", options=disp, value="N/A",
                                           key=f"in_{pid}_{feat}", label_visibility="collapsed")
@@ -735,8 +741,9 @@ def render_configure(pf):
                 for i, proj in enumerate(pf["projects"]):
                     disp = f"{T('project_default')} {i + 1}" if proj.get("auto") else proj["name"]
                     c1, c2 = st.columns([0.8, 0.2], vertical_alignment="center")
-                    c1.markdown(f"<div style='color:{TEXT}; font-size:0.9rem; font-weight:500;'>"
-                                f"{disp}</div>", unsafe_allow_html=True)
+                    c1.markdown(f"<div style='color:{TEXT}; font-size:0.9rem; font-weight:700;'>"
+                                f"<span style='border-left:3px solid {HEAD}; padding-left:0.5rem;'>"
+                                f"{disp}</span></div>", unsafe_allow_html=True)
                     with c2:
                         st.markdown("<div class='icon-btn'>", unsafe_allow_html=True)
                         if st.button("\U0001F5D1\uFE0F", key=f"del_{i}", use_container_width=True):
@@ -857,10 +864,9 @@ def render_project_card(i, proj):
                         unsafe_allow_html=True)
         head_r.markdown(f"<div style='text-align:right; color:{color}; font-weight:700; font-size:1.05rem;'>{pred}</div>",
                         unsafe_allow_html=True)
-        tkey = f"pdet_{ss.active}_{i}"
-        if head_r.toggle(T("single"), key=tkey):
-            ss[tkey] = False          # Toggle direkt zuruecksetzen -> faehrt nach Schliessen zurueck
-            open_project_dialog(proj, order, proba)
+        with head_r:
+            if st.button(T("single"), key=f"pdet_{ss.active}_{i}", use_container_width=True):
+                open_project_dialog(proj, order, proba)
         st.markdown(prob_bars(order, proba, pred) + "<div style='height:0.7rem;'></div>",
                     unsafe_allow_html=True)
 
