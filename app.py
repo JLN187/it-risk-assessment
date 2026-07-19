@@ -29,7 +29,7 @@ STR = {
    "portfolio_view": "Portfolio", "project_view": "New project", "no_projects_yet": "No projects added yet.",
    "project_default": "Project", "portfolio_default": "Portfolio", "choose": "Choose options",
    "more_hint": "The more features you set, the more reliable the prediction.",
-   "warn_one": "Please set at least one feature.",
+   "warn_one": "Please set at least one feature.", "toast_added": "Project added",
    "not_calc": "No results yet. Configure a portfolio and press \u201cCalculate Results\u201d.",
    "tile_total": "Overall portfolio risk", "tile_pelev": "Chance of a high-risk project",
    "tile_exphigh": "Expected high-risk projects", "tile_projects": "Projects in portfolio",
@@ -74,7 +74,7 @@ STR = {
    "portfolio_view": "Portfolio", "project_view": "Neues Projekt", "no_projects_yet": "Noch keine Projekte hinzugef\u00fcgt.",
    "project_default": "Projekt", "portfolio_default": "Portfolio", "choose": "Bitte ausw\u00e4hlen",
    "more_hint": "Je mehr Merkmale gesetzt sind, desto zuverl\u00e4ssiger die Vorhersage.",
-   "warn_one": "Bitte mindestens ein Merkmal setzen.",
+   "warn_one": "Bitte mindestens ein Merkmal setzen.", "toast_added": "Projekt hinzugefügt",
    "not_calc": "Noch keine Ergebnisse. Portfolio konfigurieren und \u201eErgebnisse berechnen\u201c dr\u00fccken.",
    "tile_total": "Gesamtrisiko des Portfolios", "tile_pelev": "Wahrscheinlichkeit f\u00fcr ein Hochrisikoprojekt",
    "tile_exphigh": "Erwartete Hochrisikoprojekte", "tile_projects": "Projekte im Portfolio",
@@ -275,6 +275,22 @@ st.markdown(f"""
  .icon-btn > button {{ font-size:1.15rem !important; font-weight:800 !important; padding:0.2rem 0 !important; }}
  .restr-label {{ font-size:0.78rem; color:{TEXT}; min-height:2.7rem; display:flex; align-items:flex-end;
                  line-height:1.15; margin-bottom:0.2rem; }}
+ /* Multiselect-Tags (Restriktionen) lesbar: dunkler Chip, heller Text */
+ [data-baseweb="tag"] {{ background-color:{PANEL_2} !important; color:{TEXT} !important;
+                         border:1px solid {BORDER} !important; }}
+ [data-baseweb="tag"] span {{ color:{TEXT} !important; }}
+ [data-baseweb="tag"] svg {{ fill:{TEXT} !important; }}
+ /* dezenter Details-Button */
+ .subtle-btn > button {{ background:transparent !important; border:1px solid {BORDER} !important;
+                         color:{MUTED} !important; font-size:0.82rem !important; padding:0.2rem 0.6rem !important; }}
+ .subtle-btn > button:hover {{ border-color:{HEAD} !important; color:{TEXT} !important; }}
+ .subtle-btn > button p {{ color:{MUTED} !important; }}
+ /* Kategorie-Koerper (Aggregat vs. einzeln gesetzt) auf gleiche Mindesthoehe */
+ .cat-body {{ min-height:6.2rem; }}
+ .eqcard {{ min-height:12rem; }}
+ @keyframes flashrow {{ 0% {{ background:rgba(91,181,107,0.55); }} 100% {{ background:transparent; }} }}
+ .proj-row {{ border-radius:6px; padding:0.15rem 0; }}
+ .proj-row.flash {{ animation:flashrow 1.6s ease-out 1; }}
  /* Datei-Upload zentriert */
  [data-testid="stFileUploaderDropzone"] {{ justify-content:center; text-align:center; }}
  [data-testid="stFileUploaderDropzone"] > div {{ display:flex; flex-direction:column; align-items:center; }}
@@ -353,8 +369,21 @@ with st.sidebar:
     else:
         st.caption(T("no_portfolios"))
 
+    # Abstand -> weniger wichtige Dinge nach unten
+    st.markdown("<div style='height:38vh;'></div>", unsafe_allow_html=True)
+
+    # Sprache knapp ueber dem Upload
+    st.markdown(f"<div class='subtle' style='font-size:0.78rem; margin-bottom:0.3rem;'>{T('language')}</div>",
+                unsafe_allow_html=True)
+    lc1, lc2 = st.columns(2)
+    if lc1.button("\U0001F1EC\U0001F1E7 EN", key="lang_en", use_container_width=True,
+                  type="primary" if ss.lang == "en" else "secondary"):
+        ss.lang = "en"; st.rerun()
+    if lc2.button("\U0001F1E9\U0001F1EA DE", key="lang_de", use_container_width=True,
+                  type="primary" if ss.lang == "de" else "secondary"):
+        ss.lang = "de"; st.rerun()
+
     if ss.portfolios:
-        st.markdown("<hr class='divider'>", unsafe_allow_html=True)
         st.download_button(T("save_pf"),
                            data=json.dumps({"portfolios": ss.portfolios}, indent=2, ensure_ascii=False),
                            file_name="portfolios.json", mime="application/json",
@@ -373,17 +402,6 @@ with st.sidebar:
         except Exception:
             st.warning(T("load_err_pf"))
 
-    # Sprachwahl am unteren Rand, damit sie die Ueberschrift nicht bedraengt
-    st.markdown("<hr class='divider'>", unsafe_allow_html=True)
-    st.markdown(f"<div class='subtle' style='font-size:0.78rem; margin-bottom:0.3rem;'>{T('language')}</div>",
-                unsafe_allow_html=True)
-    lc1, lc2 = st.columns(2)
-    if lc1.button("\U0001F1EC\U0001F1E7 EN", key="lang_en", use_container_width=True,
-                  type="primary" if ss.lang == "en" else "secondary"):
-        ss.lang = "en"; st.rerun()
-    if lc2.button("\U0001F1E9\U0001F1EA DE", key="lang_de", use_container_width=True,
-                  type="primary" if ss.lang == "de" else "secondary"):
-        ss.lang = "de"; st.rerun()
 
 
 # --------------------------------------------------------------------------------------
@@ -716,16 +734,21 @@ def render_category_card(pid, crit, feats, draft):
                 open_cat_dialog(pid, crit, feats)
         if saved is not None:
             n = sum(v is not None for v in saved.values())
-            st.markdown(f"<div style='font-size:0.82rem; margin:0.4rem 0; color:{GREEN}; font-weight:600;'>"
-                        f"{T('n_individual', n=n, t=len(feats))}</div>", unsafe_allow_html=True)
+            st.markdown("<div class='cat-body'>"
+                        f"<div style='font-size:0.86rem; margin:0.4rem 0 0.9rem 0; color:{GREEN}; "
+                        f"font-weight:600;'>{T('n_individual', n=n, t=len(feats))}</div>",
+                        unsafe_allow_html=True)
             if st.button(T("reset_cat"), key=f"rst_{key}", use_container_width=True):
                 ss["catvals"].pop(key, None); st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
             draft.update(saved)
         else:
             draft.update(render_category_aggregate(pid, crit, feats))
 
 
 def render_configure(pf):
+    if ss.pop("toast_add", False):
+        st.toast(T("toast_added"), icon="\u2705")
     st.markdown(f"## {T('pf_config')}")
     left, right = st.columns([0.38, 0.62], gap="medium")
 
@@ -738,10 +761,12 @@ def render_configure(pf):
             pf["name"] = _pfn.strip() or T("portfolio_default")
             if pf["projects"]:
                 st.markdown(f"<div class='param-label'>{T('added_projects')}</div>", unsafe_allow_html=True)
+                flash_i = ss.pop("flash_idx", None)
                 for i, proj in enumerate(pf["projects"]):
                     disp = f"{T('project_default')} {i + 1}" if proj.get("auto") else proj["name"]
+                    flash = " flash" if i == flash_i else ""
                     c1, c2 = st.columns([0.8, 0.2], vertical_alignment="center")
-                    c1.markdown(f"<div style='color:{TEXT}; font-size:0.9rem; font-weight:700;'>"
+                    c1.markdown(f"<div class='proj-row{flash}' style='color:{TEXT}; font-size:0.9rem; font-weight:700;'>"
                                 f"<span style='border-left:3px solid {HEAD}; padding-left:0.5rem;'>"
                                 f"{disp}</span></div>", unsafe_allow_html=True)
                     with c2:
@@ -780,6 +805,8 @@ def render_configure(pf):
                     name = proj_name.strip() or default_proj_name(pf)
                     pf["projects"].append({"name": name, "params": draft,
                                            "auto": not proj_name.strip()})
+                    ss["flash_idx"] = len(pf["projects"]) - 1     # zuletzt hinzugefuegtes hervorheben
+                    ss["toast_add"] = True                         # Toast nach dem Rerun zeigen
                     ss.draft_id += 1; st.rerun()
         with b_col:
             if st.button(T("calc"), use_container_width=True):
@@ -865,8 +892,10 @@ def render_project_card(i, proj):
         head_r.markdown(f"<div style='text-align:right; color:{color}; font-weight:700; font-size:1.05rem;'>{pred}</div>",
                         unsafe_allow_html=True)
         with head_r:
+            st.markdown("<div class='subtle-btn'>", unsafe_allow_html=True)
             if st.button(T("single"), key=f"pdet_{ss.active}_{i}", use_container_width=True):
                 open_project_dialog(proj, order, proba)
+            st.markdown("</div>", unsafe_allow_html=True)
         st.markdown(prob_bars(order, proba, pred) + "<div style='height:0.7rem;'></div>",
                     unsafe_allow_html=True)
 
@@ -927,30 +956,28 @@ def render_results(pf):
     st.markdown("<div style='height:0.7rem;'></div>", unsafe_allow_html=True)
 
     # ---- Zeile 2: Verteilung + Restriktionspruefung nebeneinander ----
-    c1, c2 = st.columns([0.42, 0.58])
+    c1, c2 = st.columns([0.42, 0.58], gap="medium", vertical_alignment="top")
     with c1:
         with st.container(border=True):
-            st.markdown(f"<div class='cat-header'>{T('distribution')} \u00b7 {pm['n']}</div>",
-                        unsafe_allow_html=True)
-            st.markdown(_dist_chart(per_project), unsafe_allow_html=True)
+            st.markdown(f"<div class='eqcard'><div class='cat-header'>{T('distribution')} \u00b7 {pm['n']}</div>"
+                        f"{_dist_chart(per_project)}</div>", unsafe_allow_html=True)
     with c2:
         with st.container(border=True):
-            st.markdown(f"<div class='cat-header'>{T('restr_check')}</div>", unsafe_allow_html=True)
+            body = f"<div class='cat-header'>{T('restr_check')}</div>"
             if not rows:
-                st.caption(T("no_restr"))
+                body += f"<div class='subtle' style='margin-top:0.5rem;'>{T('no_restr')}</div>"
             else:
-                html = ""
                 for label, actual, limit, ok in rows:
                     c = GREEN if ok else RED
-                    html += (f"<div style='display:flex; align-items:center; gap:0.6rem; padding:0.22rem 0;"
+                    body += (f"<div style='display:flex; align-items:center; gap:0.6rem; padding:0.22rem 0;"
                              f" border-bottom:1px solid {BORDER};'>"
                              f"<div style='flex:1; color:{TEXT}; font-size:0.8rem;'>{label}</div>"
                              f"<div style='width:110px; text-align:right; color:{MUTED}; font-size:0.75rem;'>{actual}</div>"
                              f"<div style='width:100px; text-align:right; color:{MUTED}; font-size:0.75rem;'>{limit}</div>"
                              f"<div style='width:64px; text-align:right; color:{c}; font-weight:700; font-size:0.75rem;'>"
                              f"{T('ok') if ok else T('violated')}</div></div>")
-                st.markdown(html, unsafe_allow_html=True)
-                st.caption(T("restr_note"))
+                body += f"<div class='subtle' style='margin-top:0.4rem; font-size:0.72rem;'>{T('restr_note')}</div>"
+            st.markdown(body, unsafe_allow_html=True)
 
     # ---- Zeile 3: Projektkarten (2 Spalten) ----
     st.markdown(f"### {T('breakdown')}")
