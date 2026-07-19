@@ -56,7 +56,7 @@ STR = {
    "tip_cnt": "Expected number of projects at High or Critical risk (sum of individual probabilities).",
    "tip_agg": "How much risk this category contributes overall. Each feature in it is set to a matching value (features where a higher value means less risk are mapped inversely).",
    "load_err": "Model artifacts could not be loaded. Please run masterskript_final.py locally first.",
-   "language": "Language", "save_pf": "Save portfolios", "load_pf": "Load portfolios (JSON)", "load_err_pf": "Could not read file.",
+   "language": "Language", "risk_word": "risk", "save_pf": "Save portfolios", "load_pf": "Load portfolios (JSON)", "load_err_pf": "Could not read file.",
    "nom_warn": "Not set by this slider (no ranking possible): {names}. Use \u201cSet individually\u201d if needed.",
    "restrictions": "Restrictions", "restr_on": "Apply restrictions",
    "restr_hint": "Optional. Define portfolio limits; violations are flagged in the results.",
@@ -102,7 +102,7 @@ STR = {
    "tip_cnt": "Erwartete Anzahl Projekte mit High- oder Critical-Risiko (Summe der Einzelwahrscheinlichkeiten).",
    "tip_agg": "Wie viel Risiko diese Kategorie insgesamt beitr\u00e4gt. Jedes Merkmal darin wird auf einen passenden Wert gesetzt (Merkmale, bei denen ein h\u00f6herer Wert weniger Risiko bedeutet, werden gespiegelt abgebildet).",
    "load_err": "Modell-Artefakte konnten nicht geladen werden. Bitte zuerst masterskript_final.py lokal ausf\u00fchren.",
-   "language": "Sprache", "save_pf": "Portfolios speichern", "load_pf": "Portfolios laden (JSON)", "load_err_pf": "Datei konnte nicht gelesen werden.",
+   "language": "Sprache", "risk_word": "Risiko", "save_pf": "Portfolios speichern", "load_pf": "Portfolios laden (JSON)", "load_err_pf": "Datei konnte nicht gelesen werden.",
    "nom_warn": "Von diesem Regler nicht gesetzt (keine Rangordnung m\u00f6glich): {names}. Bei Bedarf \u201eEinzeln einstellen\u201c nutzen.",
    "restrictions": "Restriktionen", "restr_on": "Restriktionen anwenden",
    "restr_hint": "Optional. Portfolio-Grenzwerte festlegen; Verletzungen werden in den Ergebnissen markiert.",
@@ -274,7 +274,8 @@ st.markdown(f"""
  [data-testid="stNumberInputContainer"] {{ background:{PANEL_2} !important; }}
  .nom-warn {{ color:#d9a441; font-size:0.74rem; line-height:1.2; margin:0.1rem 0 0.4rem 0;
              min-height:2.4rem; overflow:hidden; }}
- .icon-btn > button {{ font-size:1.15rem !important; font-weight:800 !important; padding:0.2rem 0 !important; }}
+ .icon-btn > button {{ font-size:1.15rem !important; font-weight:800 !important;
+                       height:2.4rem !important; padding:0 !important; }}
  .restr-label {{ font-size:0.78rem; color:{TEXT}; min-height:2.7rem; display:flex; align-items:flex-end;
                  line-height:1.15; margin-bottom:0.2rem; }}
  /* Multiselect-Tags (Restriktionen) lesbar: dunkler Chip, heller Text */
@@ -372,7 +373,7 @@ with st.sidebar:
         st.caption(T("no_portfolios"))
 
     # Abstand -> weniger wichtige Dinge nach unten
-    st.markdown("<div style='height:38vh;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:52vh;'></div>", unsafe_allow_html=True)
 
     # Sprache knapp ueber dem Upload
     st.markdown(f"<div class='subtle' style='font-size:0.78rem; margin-bottom:0.3rem;'>{T('language')}</div>",
@@ -385,11 +386,6 @@ with st.sidebar:
                   type="primary" if ss.lang == "de" else "secondary"):
         ss.lang = "de"; st.rerun()
 
-    if ss.portfolios:
-        st.download_button(T("save_pf"),
-                           data=json.dumps({"portfolios": ss.portfolios}, indent=2, ensure_ascii=False),
-                           file_name="portfolios.json", mime="application/json",
-                           use_container_width=True)
     up = st.file_uploader(T("load_pf"), type="json", key="pf_upload", label_visibility="collapsed")
     if up is not None and not ss.get("_loaded_once"):
         try:
@@ -886,7 +882,9 @@ def render_project_card(i, proj):
     rel_label, rel_col = reliability(n_set)
     with st.container(border=True):
         head_l, head_r = st.columns([0.72, 0.28], vertical_alignment="center")
-        head_l.markdown(f"<div style='font-size:1.1rem; font-weight:600; color:{TEXT};'>{proj['name']}</div>"
+        head_l.markdown(f"<div style='font-size:1.1rem; font-weight:600; color:{TEXT};'>{proj['name']} "
+                        f"<span style='color:{MUTED}; font-weight:400;'>&middot;</span> "
+                        f"<span style='color:{color}; font-weight:700;'>{vopt(pred)} {T('risk_word')}</span></div>"
                         f"<div class='info' style='color:{MUTED}; font-size:0.85rem; margin-top:0.1rem;'>"
                         f"<span title='{T('tip_score')}'>{T('exp_score')}: {score:.2f} &#9432;</span> &middot; "
                         f"<span title='{T('rel_tip')}'>{T('reliability')}: "
@@ -897,9 +895,6 @@ def render_project_card(i, proj):
             if st.button(T("single"), key=f"pdet_{ss.active}_{i}", use_container_width=True):
                 open_project_dialog(proj, order, proba)
             st.markdown("</div>", unsafe_allow_html=True)
-        # Risikoklasse prominent ueber den Balken
-        st.markdown(f"<div style='margin:0.6rem 0 0.3rem 0; color:{color}; font-weight:700; "
-                    f"font-size:1.15rem;'>{vopt(pred)}</div>", unsafe_allow_html=True)
         st.markdown(prob_bars(order, proba, pred) + "<div style='height:0.7rem;'></div>",
                     unsafe_allow_html=True)
 
@@ -946,7 +941,7 @@ def render_results(pf):
     rows, viol = check_restrictions(pf)
 
     # ---- Zeile 1: KPI-Kacheln ----
-    k = st.columns(4)
+    k = st.columns(4, gap="small")
     k[0].markdown(_tile(T("tile_total"), vopt(pm["level"]), p_color), unsafe_allow_html=True)
     k[1].markdown(_tile(T("tile_pelev"), f"{pm['p_at_least_one_elevated']:.0%}", TEXT, T("tip_elev")),
                   unsafe_allow_html=True)
@@ -960,8 +955,8 @@ def render_results(pf):
 
     st.markdown("<div style='height:0.7rem;'></div>", unsafe_allow_html=True)
 
-    # ---- Zeile 2: Verteilung + Restriktionspruefung nebeneinander ----
-    c1, c2 = st.columns([0.42, 0.58], gap="medium", vertical_alignment="top")
+    # ---- Zeile 2: Verteilung + Restriktionspruefung nebeneinander (50/50 -> Mitte deckt sich) ----
+    c1, c2 = st.columns(2, gap="small", vertical_alignment="top")
     with c1:
         with st.container(border=True):
             st.markdown(f"<div class='eqcard'><div class='cat-header'>{T('distribution')} \u00b7 {pm['n']}</div>"
@@ -988,7 +983,7 @@ def render_results(pf):
     st.markdown(f"### {T('breakdown')}")
     projs = list(enumerate(pf["projects"]))
     for rs in range(0, len(projs), 2):
-        cols = st.columns(2)
+        cols = st.columns(2, gap="small")
         for col, (i, proj) in zip(cols, projs[rs:rs + 2]):
             with col:
                 render_project_card(i, proj)
