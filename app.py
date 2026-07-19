@@ -62,7 +62,8 @@ STR = {
    "restr_hint": "Optional. Define portfolio limits; violations are flagged in the results.",
    "restr_a_pick": "Which totals to limit", "restr_a": "Portfolio totals (max)", "restr_b": "Portfolio averages", "restr_c": "Per-project rule",
    "restr_c_rule": "Flag projects with regulatory compliance at High or Critical",
-   "restr_c_tip": "Regulatory requirements = how strongly the project is subject to laws, standards or audits (e.g. GDPR, ISO, financial supervision). Projects rated High or Critical are flagged because they usually need extra review, documentation and lead time.",
+   "restr_c_tip": "Counts projects whose REGULATORY COMPLIANCE feature is set to High or Critical \u2014 not the project's overall risk class. A project can be overall High-risk without high regulatory requirements, and vice versa.",
+   "restr_c_label": "Projects with high regulatory requirements",
    "distribution": "Risk distribution", "restr_check": "Restriction Check", "ok": "OK", "violated": "VIOLATED",
    "limit": "limit", "actual": "actual", "min_avg": "min avg", "max_avg": "max avg",
    "flagged": "flagged project(s)", "no_restr": "No restrictions active.",
@@ -107,7 +108,8 @@ STR = {
    "restr_hint": "Optional. Portfolio-Grenzwerte festlegen; Verletzungen werden in den Ergebnissen markiert.",
    "restr_a_pick": "Welche Summen begrenzen", "restr_a": "Portfoliosummen (max)", "restr_b": "Portfoliodurchschnitte", "restr_c": "Einzelprojekt-Regel",
    "restr_c_rule": "Projekte mit regulatorischen Anforderungen auf Hoch/Kritisch markieren",
-   "restr_c_tip": "Regulatorische Anforderungen = wie stark das Projekt Gesetzen, Normen oder Pr\u00fcfungen unterliegt (z. B. DSGVO, ISO, Finanzaufsicht). Projekte mit Stufe Hoch oder Kritisch werden markiert, weil sie meist zus\u00e4tzliche Pr\u00fcfungen, Dokumentation und Vorlaufzeit ben\u00f6tigen.",
+   "restr_c_tip": "Z\u00e4hlt Projekte, deren MERKMAL \u201eRegulatorische Anforderungen\u201c auf Hoch oder Kritisch steht \u2014 nicht die Gesamt-Risikoklasse. Ein Projekt kann insgesamt High-Risiko sein, ohne hohe regulatorische Anforderungen \u2013 und umgekehrt.",
+   "restr_c_label": "Projekte mit hohen regulatorischen Anforderungen",
    "distribution": "Risikoverteilung", "restr_check": "Restriktionspr\u00fcfung", "ok": "OK", "violated": "VERLETZT",
    "limit": "Grenzwert", "actual": "Ist", "min_avg": "Min-\u00d8", "max_avg": "Max-\u00d8",
    "flagged": "markierte(s) Projekt(e)", "no_restr": "Keine Restriktionen aktiv.",
@@ -287,7 +289,7 @@ st.markdown(f"""
  .subtle-btn > button p {{ color:{MUTED} !important; }}
  /* Kategorie-Koerper (Aggregat vs. einzeln gesetzt) auf gleiche Mindesthoehe */
  .cat-body {{ min-height:6.2rem; }}
- .eqcard {{ min-height:12rem; }}
+ .eqcard {{ min-height:15.5rem; display:flex; flex-direction:column; }}
  @keyframes flashrow {{ 0% {{ background:rgba(91,181,107,0.55); }} 100% {{ background:transparent; }} }}
  .proj-row {{ border-radius:6px; padding:0.15rem 0; }}
  .proj-row.flash {{ animation:flashrow 1.6s ease-out 1; }}
@@ -583,7 +585,7 @@ def check_restrictions(pf):
                if str(eff(p["params"], REG_FEAT)) in ("High", "Critical")]
     ok = len(flagged) == 0
     viol += 0 if ok else 1
-    rows.append((f"<span title='{T('restr_c_tip')}'>{L(REG_FEAT)} &#9432;</span>",
+    rows.append((f"<span title='{T('restr_c_tip')}'>{T('restr_c_label')} &#9432;</span>",
                  f"{len(flagged)} {T('flagged')}", "0", ok))
     return rows, viol
 
@@ -765,10 +767,11 @@ def render_configure(pf):
                 for i, proj in enumerate(pf["projects"]):
                     disp = f"{T('project_default')} {i + 1}" if proj.get("auto") else proj["name"]
                     flash = " flash" if i == flash_i else ""
-                    c1, c2 = st.columns([0.8, 0.2], vertical_alignment="center")
-                    c1.markdown(f"<div class='proj-row{flash}' style='color:{TEXT}; font-size:0.9rem; font-weight:700;'>"
-                                f"<span style='border-left:3px solid {HEAD}; padding-left:0.5rem;'>"
-                                f"{disp}</span></div>", unsafe_allow_html=True)
+                    c1, c2 = st.columns([0.82, 0.18], vertical_alignment="center")
+                    c1.markdown(f"<div class='proj-row{flash}' style='display:flex; align-items:center;"
+                                f" min-height:2.4rem; border-left:3px solid {HEAD}; padding-left:0.6rem;"
+                                f" color:{TEXT}; font-size:0.92rem; font-weight:700;'>{disp}</div>",
+                                unsafe_allow_html=True)
                     with c2:
                         st.markdown("<div class='icon-btn'>", unsafe_allow_html=True)
                         if st.button("\U0001F5D1\uFE0F", key=f"del_{i}", use_container_width=True):
@@ -882,20 +885,21 @@ def render_project_card(i, proj):
     n_set = sum(v is not None for v in proj["params"].values())
     rel_label, rel_col = reliability(n_set)
     with st.container(border=True):
-        head_l, head_r = st.columns([0.75, 0.25])
+        head_l, head_r = st.columns([0.72, 0.28], vertical_alignment="center")
         head_l.markdown(f"<div style='font-size:1.1rem; font-weight:600; color:{TEXT};'>{proj['name']}</div>"
                         f"<div class='info' style='color:{MUTED}; font-size:0.85rem; margin-top:0.1rem;'>"
                         f"<span title='{T('tip_score')}'>{T('exp_score')}: {score:.2f} &#9432;</span> &middot; "
                         f"<span title='{T('rel_tip')}'>{T('reliability')}: "
                         f"<span style='color:{rel_col}; font-weight:600;'>{rel_label}</span> &#9432;</span></div>",
                         unsafe_allow_html=True)
-        head_r.markdown(f"<div style='text-align:right; color:{color}; font-weight:700; font-size:1.05rem;'>{pred}</div>",
-                        unsafe_allow_html=True)
         with head_r:
             st.markdown("<div class='subtle-btn'>", unsafe_allow_html=True)
             if st.button(T("single"), key=f"pdet_{ss.active}_{i}", use_container_width=True):
                 open_project_dialog(proj, order, proba)
             st.markdown("</div>", unsafe_allow_html=True)
+        # Risikoklasse prominent ueber den Balken
+        st.markdown(f"<div style='margin:0.6rem 0 0.3rem 0; color:{color}; font-weight:700; "
+                    f"font-size:1.15rem;'>{vopt(pred)}</div>", unsafe_allow_html=True)
         st.markdown(prob_bars(order, proba, pred) + "<div style='height:0.7rem;'></div>",
                     unsafe_allow_html=True)
 
@@ -904,10 +908,11 @@ def _tile(label, value, color, tip=""):
     t = f" title='{tip}'" if tip else ""
     info = " &#9432;" if tip else ""
     return (f"<div style='background:{PANEL}; border:1px solid {BORDER}; border-radius:10px;"
-            f" padding:0.7rem 0.9rem; height:100%;'>"
-            f"<div class='subtle'{t} style='font-size:0.78rem; cursor:{'help' if tip else 'default'};'>"
-            f"{label}{info}</div>"
-            f"<div style='font-size:1.6rem; font-weight:700; color:{color}; line-height:1.5;'>{value}</div></div>")
+            f" padding:0.7rem 0.9rem; height:100%; display:flex; flex-direction:column;'>"
+            f"<div class='subtle'{t} style='font-size:0.78rem; min-height:2.4rem; line-height:1.2;"
+            f" cursor:{'help' if tip else 'default'};'>{label}{info}</div>"
+            f"<div style='font-size:1.6rem; font-weight:700; color:{color}; line-height:1.3;"
+            f" margin-top:auto;'>{value}</div></div>")
 
 
 def _dist_chart(per_project):
@@ -987,6 +992,14 @@ def render_results(pf):
         for col, (i, proj) in zip(cols, projs[rs:rs + 2]):
             with col:
                 render_project_card(i, proj)
+
+    # Speichern ergibt nach der Auswertung Sinn -> hier prominent anbieten
+    st.markdown("<div style='height:1.2rem;'></div>", unsafe_allow_html=True)
+    _, sc, _ = st.columns([0.32, 0.36, 0.32])
+    sc.download_button("\U0001F4BE  " + T("save_pf"),
+                       data=json.dumps({"portfolios": ss.portfolios}, indent=2, ensure_ascii=False),
+                       file_name="portfolios.json", mime="application/json",
+                       use_container_width=True)
 
 
 # ======================================================================================
