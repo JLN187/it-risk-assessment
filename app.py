@@ -265,6 +265,9 @@ st.markdown(f"""
  [data-testid="stHorizontalBlock"] [data-testid="stVerticalBlockBorderWrapper"] {{ flex:1; height:auto; }}
  .stButton > button {{ font-size:1.02rem; }}
  [data-testid="stHorizontalBlock"] .stButton > button {{ font-weight:700; }}
+ [data-testid="stNumberInput"] input {{ background:{PANEL_2} !important; color:{TEXT} !important; }}
+ [data-baseweb="input"] {{ background:{PANEL_2} !important; }}
+ [data-testid="stNumberInputContainer"] {{ background:{PANEL_2} !important; }}
  .nom-warn {{ color:#d9a441; font-size:0.74rem; line-height:1.2; margin:0.1rem 0 0.4rem 0;
              min-height:2.4rem; overflow:hidden; }}
  .icon-btn > button {{ font-size:1.15rem !important; font-weight:800 !important; padding:0.2rem 0 !important; }}
@@ -456,7 +459,7 @@ def _step(f):
 def _nice(v, kind):
     """Auf einen gut lesbaren Grenzwert runden."""
     if kind == "money":
-        return round(v / 100_000) * 100_000 if v >= 100_000 else round(v / 10_000) * 10_000
+        return round(v / 500_000) * 500_000 if v >= 500_000 else round(v / 100_000) * 100_000
     if kind == "rate":
         return round(v * 20) / 20
     if kind == "int":
@@ -554,7 +557,8 @@ def check_restrictions(pf):
                if str(eff(p["params"], REG_FEAT)) in ("High", "Critical")]
     ok = len(flagged) == 0
     viol += 0 if ok else 1
-    rows.append((f"{L(REG_FEAT)}", f"{len(flagged)} {T('flagged')}", "0", ok))
+    rows.append((f"<span title='{T('restr_c_tip')}'>{L(REG_FEAT)} &#9432;</span>",
+                 f"{len(flagged)} {T('flagged')}", "0", ok))
     return rows, viol
 
 
@@ -585,20 +589,32 @@ def render_feature(pid, feat):
         return None if choice == "N/A" else spec["value_map"][back[choice]]
     if spec["type"] == "numeric":
         c1, c2 = st.columns([0.76, 0.24])
-        with c1:
-            choice = st.select_slider(" ", options=disp, value="N/A", key=f"in_{pid}_{feat}", label_visibility="collapsed")
-        with c1:
-            st.markdown(_ticks(disp), unsafe_allow_html=True)
         with c2:
             raw = st.text_input(" ", key=f"num_{pid}_{feat}",
                                 placeholder=spec.get("range_label", ""),
                                 label_visibility="collapsed", help=T("custom"))
+        custom_val = None
         if raw:
             try:
-                val = float(raw.replace(",", "."))
-                return max(spec["min"], min(spec["max"], val))   # auf Slider-Grenzen begrenzen
+                custom_val = max(spec["min"], min(spec["max"], float(raw.replace(",", "."))))
             except ValueError:
-                pass
+                custom_val = None
+        with c1:
+            if custom_val is not None:
+                # Slider-Griff auf den zum Custom-Wert nächstgelegenen Checkpoint setzen
+                reps = [spec["value_map"][o] for o in spec["options"]]
+                nearest = min(range(len(reps)), key=lambda i: abs(reps[i] - custom_val))
+                st.select_slider(" ", options=disp, value=disp[nearest + 1],
+                                 key=f"in_{pid}_{feat}", label_visibility="collapsed", disabled=True)
+                st.markdown(_ticks(disp)
+                            + f"<div style='color:{TEXT}; font-size:0.72rem; margin-top:-0.3rem;'>"
+                              f"= {custom_val:g}</div>", unsafe_allow_html=True)
+            else:
+                choice = st.select_slider(" ", options=disp, value="N/A",
+                                          key=f"in_{pid}_{feat}", label_visibility="collapsed")
+                st.markdown(_ticks(disp), unsafe_allow_html=True)
+        if custom_val is not None:
+            return custom_val
         return None if choice == "N/A" else spec["value_map"][back[choice]]
     choice = st.select_slider(" ", options=disp, value="N/A", key=f"in_{pid}_{feat}", label_visibility="collapsed")
     st.markdown(_ticks(disp), unsafe_allow_html=True)
@@ -718,8 +734,8 @@ def render_configure(pf):
                 st.markdown(f"<div class='param-label'>{T('added_projects')}</div>", unsafe_allow_html=True)
                 for i, proj in enumerate(pf["projects"]):
                     disp = f"{T('project_default')} {i + 1}" if proj.get("auto") else proj["name"]
-                    c1, c2 = st.columns([0.86, 0.14])
-                    c1.markdown(f"<div style='padding:0.42rem 0 0 0.1rem; color:{TEXT}; font-size:0.85rem;'>"
+                    c1, c2 = st.columns([0.8, 0.2], vertical_alignment="center")
+                    c1.markdown(f"<div style='color:{TEXT}; font-size:0.9rem; font-weight:500;'>"
                                 f"{disp}</div>", unsafe_allow_html=True)
                     with c2:
                         st.markdown("<div class='icon-btn'>", unsafe_allow_html=True)
@@ -841,7 +857,9 @@ def render_project_card(i, proj):
                         unsafe_allow_html=True)
         head_r.markdown(f"<div style='text-align:right; color:{color}; font-weight:700; font-size:1.05rem;'>{pred}</div>",
                         unsafe_allow_html=True)
-        if head_r.toggle(T("single"), key=f"pdet_{ss.active}_{i}"):
+        tkey = f"pdet_{ss.active}_{i}"
+        if head_r.toggle(T("single"), key=tkey):
+            ss[tkey] = False          # Toggle direkt zuruecksetzen -> faehrt nach Schliessen zurueck
             open_project_dialog(proj, order, proba)
         st.markdown(prob_bars(order, proba, pred) + "<div style='height:0.7rem;'></div>",
                     unsafe_allow_html=True)
@@ -939,18 +957,25 @@ def render_results(pf):
 
 
 # ======================================================================================
-# ROUTER (mittige Segment-Navigation aus zwei abgerundeten Buttons)
+# ROUTER (Nav erst nach Berechnung; davor nur Konfiguration)
 # ======================================================================================
-_, mid, _ = st.columns([0.26, 0.48, 0.26])
-with mid:
-    n1, n2 = st.columns(2)
-    if n1.button(T("configure"), use_container_width=True,
-                 type="primary" if ss.view == "Configure" else "secondary"):
-        ss.view = "Configure"; st.rerun()
-    if n2.button(T("results"), use_container_width=True,
-                 type="primary" if ss.view == "Results" else "secondary"):
-        ss.view = "Results"; st.rerun()
-st.markdown("<hr class='divider'>", unsafe_allow_html=True)
+active_pf = ss.portfolios.get(ss.active) if ss.active in ss.portfolios else None
+show_nav = bool(active_pf and active_pf.get("calculated"))
+
+if show_nav:
+    _, mid, _ = st.columns([0.26, 0.48, 0.26])
+    with mid:
+        n1, n2 = st.columns(2)
+        if n1.button(T("configure"), use_container_width=True,
+                     type="primary" if ss.view == "Configure" else "secondary"):
+            ss.view = "Configure"; st.rerun()
+        if n2.button(T("results"), use_container_width=True,
+                     type="primary" if ss.view == "Results" else "secondary"):
+            ss.view = "Results"; st.rerun()
+    st.markdown("<hr class='divider'>", unsafe_allow_html=True)
+else:
+    ss.view = "Configure"       # ohne Ergebnisse kein Results-Tab
+    st.markdown("<div style='height:1.5rem;'></div>", unsafe_allow_html=True)
 
 if ss.active is None or ss.active not in ss.portfolios:
     render_empty_state()

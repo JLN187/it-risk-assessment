@@ -134,7 +134,7 @@ def build_feature_spec(df):
             uniq = np.sort(s.unique())
             options, vmap = [], {}
             if len(uniq) <= 6:
-                # Wenige Auspraegungen -> echte Werte als Stufen (keine Kunst-Quartile)
+                # Wenige Auspraegungen -> echte Werte als Stufen
                 for u in uniq:
                     label = _fmt(u, kind)
                     if label in vmap:
@@ -142,7 +142,13 @@ def build_feature_spec(df):
                     options.append(label)
                     vmap[label] = float(u)
             else:
-                edges = np.unique(np.quantile(s, [0, .25, .5, .75, 1.0]))
+                # GLEICHMAESSIGE Stufen ueber den echten Wertebereich (nicht Quartile),
+                # damit die Slider-Abstaende regelmaessig und intuitiv sind.
+                lo_r, hi_r = float(s.min()), float(s.max())
+                n_bins = 4
+                edges = np.linspace(lo_r, hi_r, n_bins + 1)
+                if kind == "int":
+                    edges = np.unique(np.round(edges))
                 for i in range(len(edges) - 1):
                     lo, hi = edges[i], edges[i + 1]
                     last = (i == len(edges) - 2)
@@ -155,9 +161,8 @@ def build_feature_spec(df):
                         continue
                     options.append(label)
                     vmap[label] = rep
-            # Anzeigebereich exakt wie die Tick-Beschriftungen (sonst widerspricht das Custom-Feld den Stufen)
-            lo_disp = _fmt(_round_nice(float(uniq[0] if len(uniq) <= 6 else s.min()), kind), kind)
-            hi_disp = _fmt(_round_nice(float(uniq[-1] if len(uniq) <= 6 else s.max()), kind), kind)
+            lo_disp = _fmt(_round_nice(float(s.min()), kind), kind)
+            hi_disp = _fmt(_round_nice(float(s.max()), kind), kind)
             spec[f] = {"type": t, "options": options, "value_map": vmap, "kind": kind,
                        "min": float(s.min()), "max": float(s.max()),
                        "range_label": f"{lo_disp}\u2013{hi_disp}"}
