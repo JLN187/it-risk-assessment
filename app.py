@@ -251,10 +251,15 @@ st.markdown(f"""
  .side-sec {{ font-size:0.72rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase;
               color:{MUTED}; margin:0.4rem 0 0.4rem 0.1rem; }}
  section[data-testid="stSidebar"] {{ overflow:hidden !important; }}
- section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{ overflow:hidden !important; }}
- section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] {{
-              border:none !important; background:transparent !important; padding:0 !important;
-              height:calc(100vh - 22rem) !important; min-height:5rem !important; overflow-y:auto !important; }}
+ section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{
+              overflow-y:auto !important; overflow-x:hidden !important;
+              padding-bottom:14rem !important; }}
+ .side-pad {{ height:0; }}
+ /* Language + Data fest am unteren Rand der Sidebar */
+ section[data-testid="stSidebar"] .st-key-side_foot {{ position:fixed !important; bottom:0;
+              width:inherit; box-sizing:border-box;
+              padding:0.6rem 1.5rem 1rem 1.5rem;
+              background:{BG}; border-top:1px solid {BORDER}; z-index:100; }}
  /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
  section[data-testid="stSidebar"] .stButton > button {{ justify-content:flex-start !important;
               text-align:left !important; font-weight:500 !important; border:none !important;
@@ -412,26 +417,28 @@ with st.sidebar:
     if st.button("\uFF0B\u2002" + T("new_portfolio"), use_container_width=True):
         new_portfolio(); st.rerun()
 
-    with st.container(height=400, border=True):           # Wrapper existiert -> per CSS gestreckt
-        if ss.portfolios:
-            for pid, pf in ss.portfolios.items():
-                mark = "\u25CF\u2002" if pid == ss.active else "\u25CB\u2002"
-                if st.button(mark + pf["name"], key=f"sel_{pid}", use_container_width=True):
-                    ss.active = pid; st.rerun()
-        else:
-            st.caption(T("no_portfolios"))
+    if ss.portfolios:
+        for pid, pf in ss.portfolios.items():
+            mark = "\u25CF\u2002" if pid == ss.active else "\u25CB\u2002"
+            if st.button(mark + pf["name"], key=f"sel_{pid}", use_container_width=True):
+                ss.active = pid; st.rerun()
+    else:
+        st.caption(T("no_portfolios"))
 
-    st.markdown(f"<div class='side-sec'>{T('language')}</div>", unsafe_allow_html=True)
-    lc1, lc2 = st.columns(2)
-    if lc1.button("\U0001F1EC\U0001F1E7\u2002EN", key="lang_en", use_container_width=True,
-                  type="primary" if ss.lang == "en" else "secondary"):
-        ss.lang = "en"; st.rerun()
-    if lc2.button("\U0001F1E9\U0001F1EA\u2002DE", key="lang_de", use_container_width=True,
-                  type="primary" if ss.lang == "de" else "secondary"):
-        ss.lang = "de"; st.rerun()
-
-    st.markdown(f"<div class='side-sec' style='margin-top:0.6rem;'>{T('data_sec')}</div>", unsafe_allow_html=True)
-    up = st.file_uploader(T("load_pf"), type="json", key="pf_upload", label_visibility="collapsed")
+    st.markdown("<div class='side-pad'></div>", unsafe_allow_html=True)
+    foot = st.container(key="side_foot")
+    with foot:
+        st.markdown(f"<div class='side-sec'>{T('language')}</div>", unsafe_allow_html=True)
+        lc1, lc2 = st.columns(2)
+        if lc1.button("\U0001F1EC\U0001F1E7\u2002EN", key="lang_en", use_container_width=True,
+                      type="primary" if ss.lang == "en" else "secondary"):
+            ss.lang = "en"; st.rerun()
+        if lc2.button("\U0001F1E9\U0001F1EA\u2002DE", key="lang_de", use_container_width=True,
+                      type="primary" if ss.lang == "de" else "secondary"):
+            ss.lang = "de"; st.rerun()
+        st.markdown(f"<div class='side-sec' style='margin-top:0.6rem;'>{T('data_sec')}</div>",
+                    unsafe_allow_html=True)
+        up = st.file_uploader(T("load_pf"), type="json", key="pf_upload", label_visibility="collapsed")
     if up is not None and not ss.get("_loaded_once"):
         try:
             data = json.load(up)
