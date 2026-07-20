@@ -17,6 +17,10 @@ LEVEL_COLORS = {"Low": GREEN, "Medium": "#d9a441", "High": "#e5844d", "Critical"
 AGG_EN = ["N/A", "Low", "Medium", "High", "Very High"]
 CAT_DIR = {"Complexity": +1, "Efficiency": -1, "Risk": +1, "Strategy": -1, "Urgency": +1}
 
+# Hoehe der scrollbaren Portfolio-Liste. Groesser = Liste laenger -> Language/Data rutschen tiefer.
+# Beispiele: "calc(100vh - 22rem)" = Tools hoeher, "calc(100vh - 10rem)" = Tools ganz unten.
+SIDEBAR_LIST_HEIGHT = "calc(100vh - 12rem)"
+
 # --------------------------------------------------------------------------------------
 # i18n
 # --------------------------------------------------------------------------------------
@@ -251,21 +255,13 @@ st.markdown(f"""
  .side-sec {{ font-size:0.72rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase;
               color:{MUTED}; margin:0.4rem 0 0.4rem 0.1rem; }}
  section[data-testid="stSidebar"] {{ overflow:hidden !important; }}
- section[data-testid="stSidebar"] > div:first-child {{ height:100vh !important; }}
- section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{
-              height:100% !important; display:flex !important; flex-direction:column !important; }}
- section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] > div:first-child {{
-              height:100% !important; display:flex !important; flex-direction:column !important;
-              min-height:0 !important; }}
  section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"],
  section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] > div,
  section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlock"] {{
               border:none !important; border-radius:0 !important; background:transparent !important;
               box-shadow:none !important; outline:none !important; }}
  section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:not(.st-key-side_foot) {{
-              padding:0 !important; flex:1 1 auto !important; height:auto !important;
-              min-height:0 !important; overflow-y:auto !important; }}
- .st-key-side_foot {{ flex:0 0 auto !important; }}
+              padding:0 !important; height:{SIDEBAR_LIST_HEIGHT} !important; overflow-y:auto !important; }}
  /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
  section[data-testid="stSidebar"] .stButton > button {{ justify-content:flex-start !important;
               text-align:left !important; font-weight:500 !important; border:none !important;
