@@ -56,7 +56,7 @@ STR = {
    "tip_cnt": "Expected number of projects at High or Critical risk (sum of individual probabilities).",
    "tip_agg": "How much risk this category contributes overall. Each feature in it is set to a matching value (features where a higher value means less risk are mapped inversely).",
    "load_err": "Model artifacts could not be loaded. Please run masterskript_final.py locally first.",
-   "language": "Language", "risk_word": "risk", "save_pf": "Download portfolios (JSON)",
+   "language": "Language", "data_sec": "Data", "risk_word": "risk", "save_pf": "Download portfolios (JSON)",
    "advice_title": "How to reduce this risk",
    "default_tag": "default", "advice_up": "Biggest risk drivers: {feats} \u2013 lowering these has the strongest effect.",
    "advice_down": "Already lowering the risk: {feats} \u2013 strengthening these helps most.", "load_pf": "Load portfolios (JSON)", "load_err_pf": "Could not read file.",
@@ -105,7 +105,7 @@ STR = {
    "tip_cnt": "Erwartete Anzahl Projekte mit High- oder Critical-Risiko (Summe der Einzelwahrscheinlichkeiten).",
    "tip_agg": "Wie viel Risiko diese Kategorie insgesamt beitr\u00e4gt. Jedes Merkmal darin wird auf einen passenden Wert gesetzt (Merkmale, bei denen ein h\u00f6herer Wert weniger Risiko bedeutet, werden gespiegelt abgebildet).",
    "load_err": "Modell-Artefakte konnten nicht geladen werden. Bitte zuerst masterskript_final.py lokal ausf\u00fchren.",
-   "language": "Sprache", "risk_word": "Risiko", "save_pf": "Portfolios herunterladen (JSON)",
+   "language": "Sprache", "data_sec": "Daten", "risk_word": "Risiko", "save_pf": "Portfolios herunterladen (JSON)",
    "advice_title": "So l\u00e4sst sich das Risiko senken",
    "default_tag": "Standardwert", "advice_up": "Gr\u00f6\u00dfte Risikotreiber: {feats} \u2013 eine Verringerung wirkt am st\u00e4rksten.",
    "advice_down": "Senken das Risiko bereits: {feats} \u2013 eine weitere St\u00e4rkung hilft am meisten.", "load_pf": "Portfolios laden (JSON)", "load_err_pf": "Datei konnte nicht gelesen werden.",
@@ -250,6 +250,23 @@ st.markdown(f"""
  .block-container {{ padding-top:4rem; padding-bottom:4rem; max-width:1800px; }}
  h1,h2,h3 {{ font-weight:600; letter-spacing:-0.01em; }}
  .subtle {{ color:{MUTED}; font-size:0.95rem; }}
+ .side-sec {{ font-size:0.72rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase;
+              color:{MUTED}; margin:0.4rem 0 0.4rem 0.1rem; }}
+ /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
+ section[data-testid="stSidebar"] .stButton > button {{ justify-content:flex-start !important;
+              text-align:left !important; font-weight:500 !important; border:none !important;
+              background:transparent !important; color:{TEXT} !important; padding:0.35rem 0.6rem !important; }}
+ section[data-testid="stSidebar"] .stButton > button:hover {{ background:{PANEL_2} !important; }}
+ /* aktiver Menue-Eintrag (aktives Portfolio) hervorheben */
+ section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]
+   .stButton > button[kind="primary"] {{ background:{PANEL_2} !important; color:{TEXT} !important;
+              font-weight:600 !important; }}
+ /* Sprach-Flaggen: zentriert, kompakt, aktiver Zustand sichtbar */
+ section[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton > button {{
+              justify-content:center !important; text-align:center !important;
+              border:1px solid {BORDER} !important; }}
+ section[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton > button[kind="primary"] {{
+              background:{PANEL_2} !important; border-color:{HEAD} !important; color:{TEXT} !important; }}
  .cat-header {{ color:{TEXT}; text-transform:uppercase; letter-spacing:0.14em; font-size:0.92rem; font-weight:800;
                  border-left:3px solid {HEAD}; padding-left:0.55rem; display:flex; align-items:center;
                  min-height:2.4rem; line-height:1; margin:0 0 0.9rem 0; }}
@@ -382,36 +399,40 @@ def new_portfolio():
 # Sidebar
 # --------------------------------------------------------------------------------------
 with st.sidebar:
-    st.markdown(f"<div style='font-size:1.28rem; font-weight:700; color:{TEXT}; "
-                f"margin:0.2rem 0 0.2rem 0; text-align:center; line-height:1.25;'>{T('app_title')}</div>"
-                f"<div style='font-size:0.74rem; color:{MUTED}; text-align:center; "
-                f"margin:0 0 1.1rem 0; line-height:1.3;'>{T('app_subtitle')}</div>",
-                unsafe_allow_html=True)
-    st.markdown(f"**{T('portfolios')}**")
-    if st.button("\uFF0B  " + T("new_portfolio"), use_container_width=True):
+    # Titel mit dezentem Icon (Claude-Stil)
+    st.markdown(
+        f"<div style='display:flex; align-items:center; gap:0.5rem; margin:0.2rem 0 0.15rem 0;'>"
+        f"<span style='font-size:1.15rem;'>\U0001F4CA</span>"
+        f"<span style='font-size:1.08rem; font-weight:700; color:{TEXT}; line-height:1.2;'>{T('app_title')}</span>"
+        f"</div>"
+        f"<div style='font-size:0.72rem; color:{MUTED}; margin:0 0 1.2rem 0; line-height:1.3;'>"
+        f"{T('app_subtitle')}</div>",
+        unsafe_allow_html=True)
+
+    st.markdown(f"<div class='side-sec'>{T('portfolios')}</div>", unsafe_allow_html=True)
+    if st.button("\uFF0B\u2002" + T("new_portfolio"), use_container_width=True):
         new_portfolio(); st.rerun()
     if ss.portfolios:
         for pid, pf in ss.portfolios.items():
-            mark = "\u25CF " if pid == ss.active else "\u25CB "
+            mark = "\u25CF\u2002" if pid == ss.active else "\u25CB\u2002"
             if st.button(mark + pf["name"], key=f"sel_{pid}", use_container_width=True):
                 ss.active = pid; st.rerun()
     else:
         st.caption(T("no_portfolios"))
 
     # Abstand -> weniger wichtige Dinge nach unten
-    st.markdown("<div style='height:62vh;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:58vh;'></div>", unsafe_allow_html=True)
 
-    # Sprache knapp ueber dem Upload
-    st.markdown(f"<div class='subtle' style='font-size:0.78rem; margin-bottom:0.3rem;'>{T('language')}</div>",
-                unsafe_allow_html=True)
+    st.markdown(f"<div class='side-sec'>{T('language')}</div>", unsafe_allow_html=True)
     lc1, lc2 = st.columns(2)
-    if lc1.button("\U0001F1EC\U0001F1E7 EN", key="lang_en", use_container_width=True,
+    if lc1.button("\U0001F1EC\U0001F1E7\u2002EN", key="lang_en", use_container_width=True,
                   type="primary" if ss.lang == "en" else "secondary"):
         ss.lang = "en"; st.rerun()
-    if lc2.button("\U0001F1E9\U0001F1EA DE", key="lang_de", use_container_width=True,
+    if lc2.button("\U0001F1E9\U0001F1EA\u2002DE", key="lang_de", use_container_width=True,
                   type="primary" if ss.lang == "de" else "secondary"):
         ss.lang = "de"; st.rerun()
 
+    st.markdown(f"<div class='side-sec' style='margin-top:0.6rem;'>{T('data_sec')}</div>", unsafe_allow_html=True)
     up = st.file_uploader(T("load_pf"), type="json", key="pf_upload", label_visibility="collapsed")
     if up is not None and not ss.get("_loaded_once"):
         try:
