@@ -252,7 +252,9 @@ st.markdown(f"""
               color:{MUTED}; margin:0.4rem 0 0.4rem 0.1rem; }}
  section[data-testid="stSidebar"] {{ overflow:hidden !important; }}
  section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{ overflow:hidden !important; }}
- .side-spacer {{ height:58vh; }}
+ /* nur der Portfolio-Listencontainer scrollt */
+ section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] {{ overflow-y:auto !important; }}
+ .side-spacer {{ height:20vh; }}
  /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
  section[data-testid="stSidebar"] .stButton > button {{ justify-content:flex-start !important;
               text-align:left !important; font-weight:500 !important; border:none !important;
@@ -409,13 +411,15 @@ with st.sidebar:
     st.markdown(f"<div class='side-sec'>{T('portfolios')}</div>", unsafe_allow_html=True)
     if st.button("\uFF0B\u2002" + T("new_portfolio"), use_container_width=True):
         new_portfolio(); st.rerun()
-    if ss.portfolios:
-        for pid, pf in ss.portfolios.items():
-            mark = "\u25CF\u2002" if pid == ss.active else "\u25CB\u2002"
-            if st.button(mark + pf["name"], key=f"sel_{pid}", use_container_width=True):
-                ss.active = pid; st.rerun()
-    else:
-        st.caption(T("no_portfolios"))
+
+    with st.container(height=260, border=False):          # nur diese Liste scrollt
+        if ss.portfolios:
+            for pid, pf in ss.portfolios.items():
+                mark = "\u25CF\u2002" if pid == ss.active else "\u25CB\u2002"
+                if st.button(mark + pf["name"], key=f"sel_{pid}", use_container_width=True):
+                    ss.active = pid; st.rerun()
+        else:
+            st.caption(T("no_portfolios"))
 
     st.markdown("<div class='side-spacer'></div>", unsafe_allow_html=True)
 
