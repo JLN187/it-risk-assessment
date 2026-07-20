@@ -251,9 +251,13 @@ st.markdown(f"""
  .side-sec {{ font-size:0.72rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase;
               color:{MUTED}; margin:0.4rem 0 0.4rem 0.1rem; }}
  section[data-testid="stSidebar"] {{ overflow:hidden !important; }}
- section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] {{
+ section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"],
+ section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] > div,
+ section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] {{
               border:none !important; border-radius:0 !important; background:transparent !important;
-              padding:0 !important; height:calc(100vh - 16rem) !important; overflow-y:auto !important; }}
+              box-shadow:none !important; outline:none !important; }}
+ section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] {{
+              padding:0 !important; height:calc(100vh - 15rem) !important; overflow-y:auto !important; }}
  /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
  section[data-testid="stSidebar"] .stButton > button {{ justify-content:flex-start !important;
               text-align:left !important; font-weight:500 !important; border:none !important;
@@ -826,10 +830,17 @@ def render_configure(pf):
 
             draft = {}
             crits = list(mb.KUB_GROUPS.items())
-            for rs in range(0, len(crits), 2):                     # 2-Spalten-Raster
-                cols = st.columns(2)
-                for col, (crit, feats) in zip(cols, crits[rs:rs + 2]):
-                    with col:
+            for rs in range(0, len(crits), 2):
+                row = crits[rs:rs + 2]
+                if len(row) == 2:
+                    cols = st.columns(2)
+                    for col, (crit, feats) in zip(cols, row):
+                        with col:
+                            render_category_card(pid, crit, feats, draft)
+                else:                                          # letzte einzelne Karte mittig setzen
+                    _, mid, _ = st.columns([0.25, 0.5, 0.25])
+                    with mid:
+                        crit, feats = row[0]
                         render_category_card(pid, crit, feats, draft)
 
         n_set = sum(v is not None for v in draft.values())
