@@ -251,10 +251,14 @@ st.markdown(f"""
  .side-sec {{ font-size:0.72rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase;
               color:{MUTED}; margin:0.4rem 0 0.4rem 0.1rem; }}
  section[data-testid="stSidebar"] {{ overflow:hidden !important; }}
- section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{ height:100vh !important; }}
+ section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{
+              height:100vh !important; display:flex !important; flex-direction:column !important; }}
+ section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] > div {{
+              flex:1 1 auto !important; display:flex !important; flex-direction:column !important;
+              min-height:0 !important; }}
  .st-key-side_list {{ border:none !important; border-radius:0 !important; background:transparent !important;
               box-shadow:none !important; outline:none !important; padding:0 !important;
-              overflow-y:auto !important; }}
+              flex:1 1 auto !important; min-height:0 !important; overflow-y:auto !important; }}
  .st-key-side_list > div, .st-key-side_list [data-testid="stVerticalBlock"] {{
               border:none !important; background:transparent !important; box-shadow:none !important; }}
  /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
