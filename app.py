@@ -308,7 +308,8 @@ st.markdown(f"""
                  line-height:1.1; margin-bottom:0.2rem; }}
  .restr-label-sm {{ height:1.4rem !important; align-items:flex-start !important; }}
  .restr-rate {{ font-size:0.66rem !important; letter-spacing:-0.02em; white-space:nowrap;
-                overflow:hidden; text-overflow:ellipsis; height:2rem !important; }}
+                overflow:hidden; text-overflow:ellipsis; height:1.6rem !important;
+                align-items:flex-start !important; }}
  /* Multiselect-Tags (Restriktionen) lesbar: dunkler Chip, heller Text */
  [data-baseweb="tag"] {{ background-color:{PANEL_2} !important; color:{TEXT} !important;
                          border:1px solid {BORDER} !important; }}
