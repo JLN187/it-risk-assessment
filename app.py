@@ -15,14 +15,13 @@ TEXT, MUTED, HEAD = "#f2f0ea", "#b3b0a8", "#d8d5cd"
 GREEN, RED = "#5bb56b", "#e0574f"
 LEVEL_COLORS = {"Low": GREEN, "Medium": "#d9a441", "High": "#e5844d", "Critical": RED, "N/A": MUTED}
 AGG_EN = ["N/A", "Low", "Medium", "High", "Very High"]
-# Risikorichtung der KATEGORIE selbst: +1 = mehr davon -> mehr Risiko, -1 = mehr davon -> weniger Risiko
 CAT_DIR = {"Complexity": +1, "Efficiency": -1, "Risk": +1, "Strategy": -1, "Urgency": +1}
 
 # --------------------------------------------------------------------------------------
 # i18n
 # --------------------------------------------------------------------------------------
 STR = {
- "en": {"app_title": "IT Project Portfolio Risk Analyzer", "app_subtitle": "Decision support for IT project portfolio management (ITPPM)", "configure": "Configure", "results": "Results",
+ "en": {"app_title": "IT Project Portfolio Risk Analyzer", "configure": "Configure", "results": "Results",
    "portfolios": "Portfolios", "new_portfolio": "New Portfolio", "no_portfolios": "No portfolios yet.",
    "no_pf_sel": "No Portfolio Selected", "create_pf": "Create a new portfolio to get started",
    "create_btn": "Create New Portfolio", "pf_config": "Portfolio Configuration", "pf_name": "Portfolio Name",
@@ -71,7 +70,7 @@ STR = {
    "limit": "limit", "actual": "actual", "min_avg": "min avg", "max_avg": "max avg",
    "flagged": "flagged project(s)", "no_restr": "No restrictions active.",
    "restr_note": "Values not set by you use the dataset's typical value, consistent with the prediction."},
- "de": {"app_title": "IT-Projektportfolio-Risikoanalyse", "app_subtitle": "Entscheidungsunterst\u00fctzung f\u00fcr das IT-Projektportfoliomanagement (ITPPM)", "configure": "Konfigurieren", "results": "Ergebnisse",
+ "de": {"app_title": "IT-Projektportfolio-Risikoanalyse", "configure": "Konfigurieren", "results": "Ergebnisse",
    "portfolios": "Portfolios", "new_portfolio": "Neues Portfolio", "no_portfolios": "Noch keine Portfolios.",
    "no_pf_sel": "Kein Portfolio ausgew\u00e4hlt", "create_pf": "Erstelle ein Portfolio, um zu starten",
    "create_btn": "Neues Portfolio erstellen", "pf_config": "Portfolio-Konfiguration", "pf_name": "Portfolioname",
@@ -244,7 +243,6 @@ except Exception as e:
 
 st.set_page_config(page_title="IT Project Portfolio Risk Analyzer", layout="wide", initial_sidebar_state="expanded")
 
-# Minimal-CSS: Theme uebernimmt Widgets; hier nur Rahmen/Feinheiten + lesbarer Aktiv-Button
 st.markdown(f"""
 <style>
  .block-container {{ padding-top:4rem; padding-bottom:4rem; max-width:1800px; }}
@@ -252,6 +250,12 @@ st.markdown(f"""
  .subtle {{ color:{MUTED}; font-size:0.95rem; }}
  .side-sec {{ font-size:0.72rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase;
               color:{MUTED}; margin:0.4rem 0 0.4rem 0.1rem; }}
+ /* Sidebar als Flex-Spalte -> Spacer fuellt Rest ohne Scrollbalken */
+ section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{ height:100%; }}
+ section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"]
+   > [data-testid="stVerticalBlock"] {{ min-height:calc(100vh - 3.5rem); display:flex;
+              flex-direction:column; }}
+ .side-spacer {{ flex:1 1 auto; min-height:1rem; }}
  /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
  section[data-testid="stSidebar"] .stButton > button {{ justify-content:flex-start !important;
               text-align:left !important; font-weight:500 !important; border:none !important;
@@ -399,14 +403,10 @@ def new_portfolio():
 # Sidebar
 # --------------------------------------------------------------------------------------
 with st.sidebar:
-    # Titel mit dezentem Icon (Claude-Stil)
     st.markdown(
-        f"<div style='display:flex; align-items:center; gap:0.5rem; margin:0.2rem 0 0.15rem 0;'>"
-        f"<span style='font-size:1.15rem;'>\U0001F4CA</span>"
-        f"<span style='font-size:1.08rem; font-weight:700; color:{TEXT}; line-height:1.2;'>{T('app_title')}</span>"
-        f"</div>"
-        f"<div style='font-size:0.72rem; color:{MUTED}; margin:0 0 1.2rem 0; line-height:1.3;'>"
-        f"{T('app_subtitle')}</div>",
+        f"<div style='font-size:0.98rem; font-weight:800; color:{TEXT}; letter-spacing:0.01em;"
+        f" white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin:0.3rem 0 1.3rem 0;'>"
+        f"{T('app_title')}</div>",
         unsafe_allow_html=True)
 
     st.markdown(f"<div class='side-sec'>{T('portfolios')}</div>", unsafe_allow_html=True)
@@ -420,8 +420,7 @@ with st.sidebar:
     else:
         st.caption(T("no_portfolios"))
 
-    # Abstand -> weniger wichtige Dinge nach unten
-    st.markdown("<div style='height:58vh;'></div>", unsafe_allow_html=True)
+    st.markdown("<div class='side-spacer'></div>", unsafe_allow_html=True)
 
     st.markdown(f"<div class='side-sec'>{T('language')}</div>", unsafe_allow_html=True)
     lc1, lc2 = st.columns(2)
@@ -501,8 +500,6 @@ def reliability(n):
     return T("rel_high"), GREEN
 
 
-# --------------------------------------------------------------------------------------
-# Restriktionen (angelehnt an Karrenbauer & Breitner 2022, Eq. 4 / Eq. 8)
 # --------------------------------------------------------------------------------------
 SUM_CANDIDATES = ["Team_Size", "Project_Budget_USD", "External_Dependencies_Count",
                   "Stakeholder_Count", "Cross_Functional_Dependencies"]                 # Typ A (addierbar)
@@ -589,7 +586,7 @@ def render_restrictions(pf):
                 is_rate = SPEC[f].get("kind") == "rate"
                 st.markdown(f"<div class='restr-label'>{L(f)} ({tag}{', %' if is_rate else ''})</div>",
                             unsafe_allow_html=True)
-                if is_rate:                                     # in Prozent anzeigen (wie die Slider)
+                if is_rate:
                     val = st.number_input(" ", min_value=lo * 100, max_value=hi * 100,
                                           value=round(cur * 100, 1), step=5.0, key=f"lim_{f}",
                                           label_visibility="collapsed")
@@ -624,7 +621,7 @@ def check_restrictions(pf):
             rows.append((f"{L(f)}", f"{avg*100:.0f}%", f"{sign} {lim[f]*100:.0f}%", ok))
         else:
             rows.append((f"{L(f)}", f"{avg:.2f}", f"{sign} {lim[f]:.2f}", ok))
-    flagged = [p["name"] for p in projs                   # Typ C: Einzelprojekt-Regulatorik
+    flagged = [p["name"] for p in projs
                if str(eff(p["params"], REG_FEAT)) in ("High", "Critical")]
     ok = len(flagged) == 0
     viol += 0 if ok else 1
@@ -672,7 +669,6 @@ def render_feature(pid, feat):
                 custom_val = None
         with c1:
             if custom_val is not None:
-                # Slider-Griff auf den zum Custom-Wert naechstgelegenen Checkpoint setzen
                 reps = [spec["value_map"][o] for o in spec["options"]]
                 nearest = min(range(len(reps)), key=lambda i: abs(reps[i] - custom_val))
                 st.select_slider(" ", options=disp, value=disp[nearest + 1],
@@ -698,7 +694,6 @@ def render_category_aggregate(pid, crit, feats):
     st.markdown(_ticks(disp), unsafe_allow_html=True)
     idx = disp.index(choice)
     noms = [f for f in feats if SPEC[f]["type"] == "nominal"]
-    # Platz fuer die Warnung immer freihalten -> Karten bleiben gleich hoch
     if idx > 0 and noms:
         st.markdown(f"<div class='nom-warn'>&#9888; "
                     f"{T('nom_warn', names=', '.join(L(f) for f in noms))}</div>", unsafe_allow_html=True)
@@ -706,16 +701,14 @@ def render_category_aggregate(pid, crit, feats):
         st.markdown("<div class='nom-warn'>&nbsp;</div>", unsafe_allow_html=True)
     if idx == 0:
         return {f: None for f in feats}
-    frac = (idx - 1) / (len(disp) - 2)              # 0 = wenig von der Kategorie ... 1 = viel
-    # Kategoriestufe -> Risikoniveau (z. B. viel Effizienz = wenig Risiko)
+    frac = (idx - 1) / (len(disp) - 2)
     risk_frac = frac if CAT_DIR.get(crit, 1) > 0 else (1 - frac)
     out = {}
     for f in feats:
         if SPEC[f]["type"] == "nominal":
-            out[f] = None          # keine Rangordnung -> kein passender Wert bestimmbar
+            out[f] = None
             continue
         o = SPEC[f]["options"]
-        # Risikoniveau -> Position auf der Merkmalsskala (Richtung des Merkmals beachten)
         ff = risk_frac if SPEC[f]["direction"] >= 0 else (1 - risk_frac)
         out[f] = SPEC[f]["value_map"][o[round(ff * (len(o) - 1))]]
     return out
@@ -745,7 +738,7 @@ def open_cat_dialog(pid, crit, feats):
         def _dlg():
             _body()
         _dlg()
-    else:                                    # Fallback fuer aeltere Streamlit-Versionen
+    else:
         with st.expander(CAT(crit), expanded=True):
             _body()
 
@@ -821,7 +814,7 @@ def render_configure(pf):
                         st.markdown("</div>", unsafe_allow_html=True)
             else:
                 st.caption(T("no_projects_yet"))
-            render_restrictions(pf)          # Restriktionen gehoeren sichtbar zur Portfolio-Ebene
+            render_restrictions(pf)
 
     # ---------------- Project View (rechts) ----------------
     pid = ss.draft_id
@@ -850,8 +843,8 @@ def render_configure(pf):
                     name = proj_name.strip() or default_proj_name(pf)
                     pf["projects"].append({"name": name, "params": draft,
                                            "auto": not proj_name.strip()})
-                    ss["flash_idx"] = len(pf["projects"]) - 1     # zuletzt hinzugefuegtes hervorheben
-                    ss["toast_add"] = True                         # Toast nach dem Rerun zeigen
+                    ss["flash_idx"] = len(pf["projects"]) - 1
+                    ss["toast_add"] = True
                     ss.draft_id += 1; st.rerun()
         with b_col:
             if st.button(T("calc"), use_container_width=True):
@@ -905,7 +898,6 @@ def render_project_details(order, proba, params):
     st.markdown(_driver_rows(neg, maxabs) or "<span class='subtle'>\u2014</span>", unsafe_allow_html=True)
     st.caption(T("default_expl"))
 
-    # Konkreter Handlungsratschlag: je bis zu drei staerkste Treiber namentlich
     if pos or neg:
         up_names = [L(f) for f, _, _ in pos[:3]]
         down_names = [L(f) for f, _, _ in neg[:3]]
@@ -1059,7 +1051,6 @@ def render_results(pf):
             with col:
                 render_project_card(i, proj)
 
-    # Speichern ergibt nach der Auswertung Sinn -> hier prominent anbieten
     st.markdown("<div style='height:1.2rem;'></div>", unsafe_allow_html=True)
     _, sc, _ = st.columns([0.32, 0.36, 0.32])
     sc.download_button(T("save_pf"),
@@ -1069,14 +1060,12 @@ def render_results(pf):
 
 
 # ======================================================================================
-# ROUTER (Nav erst nach Berechnung; davor nur Konfiguration)
-# ======================================================================================
 active_pf = ss.portfolios.get(ss.active) if ss.active in ss.portfolios else None
 show_nav = bool(active_pf and active_pf.get("calculated"))
 
 if show_nav:
-    _, mid, _ = st.columns([0.26, 0.48, 0.26])
-    with mid:
+    nav_l, _ = st.columns([0.32, 0.68])
+    with nav_l:
         n1, n2 = st.columns(2)
         if n1.button(T("configure"), use_container_width=True,
                      type="primary" if ss.view == "Configure" else "secondary"):
@@ -1086,8 +1075,8 @@ if show_nav:
             ss.view = "Results"; st.rerun()
     st.markdown("<hr class='divider'>", unsafe_allow_html=True)
 else:
-    ss.view = "Configure"       # ohne Ergebnisse kein Results-Tab
-    st.markdown("<div style='height:1.5rem;'></div>", unsafe_allow_html=True)
+    ss.view = "Configure"
+    st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
 
 if ss.active is None or ss.active not in ss.portfolios:
     render_empty_state()
