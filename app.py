@@ -251,13 +251,21 @@ st.markdown(f"""
  .side-sec {{ font-size:0.72rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase;
               color:{MUTED}; margin:0.4rem 0 0.4rem 0.1rem; }}
  section[data-testid="stSidebar"] {{ overflow:hidden !important; }}
+ section[data-testid="stSidebar"] > div:first-child {{ height:100vh !important; }}
+ section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{
+              height:100% !important; display:flex !important; flex-direction:column !important; }}
+ section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] > div:first-child {{
+              height:100% !important; display:flex !important; flex-direction:column !important;
+              min-height:0 !important; }}
  section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"],
  section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] > div,
- section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] {{
+ section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlock"] {{
               border:none !important; border-radius:0 !important; background:transparent !important;
               box-shadow:none !important; outline:none !important; }}
- section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] {{
-              padding:0 !important; height:calc(100vh - 11rem) !important; overflow-y:auto !important; }}
+ section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:not(.st-key-side_foot) {{
+              padding:0 !important; flex:1 1 auto !important; height:auto !important;
+              min-height:0 !important; overflow-y:auto !important; }}
+ .st-key-side_foot {{ flex:0 0 auto !important; }}
  /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
  section[data-testid="stSidebar"] .stButton > button {{ justify-content:flex-start !important;
               text-align:left !important; font-weight:500 !important; border:none !important;
@@ -424,18 +432,18 @@ with st.sidebar:
         else:
             st.caption(T("no_portfolios"))
 
-    st.markdown(f"<div class='side-sec'>{T('language')}</div>", unsafe_allow_html=True)
-    lc1, lc2 = st.columns(2)
-    if lc1.button("\U0001F1EC\U0001F1E7\u2002EN", key="lang_en", use_container_width=True,
-                  type="primary" if ss.lang == "en" else "secondary"):
-        ss.lang = "en"; st.rerun()
-    if lc2.button("\U0001F1E9\U0001F1EA\u2002DE", key="lang_de", use_container_width=True,
-                  type="primary" if ss.lang == "de" else "secondary"):
-        ss.lang = "de"; st.rerun()
-
-    st.markdown(f"<div class='side-sec' style='margin-top:0.6rem;'>{T('data_sec')}</div>",
-                unsafe_allow_html=True)
-    up = st.file_uploader(T("load_pf"), type="json", key="pf_upload", label_visibility="collapsed")
+    with st.container(key="side_foot"):
+        st.markdown(f"<div class='side-sec'>{T('language')}</div>", unsafe_allow_html=True)
+        lc1, lc2 = st.columns(2)
+        if lc1.button("\U0001F1EC\U0001F1E7\u2002EN", key="lang_en", use_container_width=True,
+                      type="primary" if ss.lang == "en" else "secondary"):
+            ss.lang = "en"; st.rerun()
+        if lc2.button("\U0001F1E9\U0001F1EA\u2002DE", key="lang_de", use_container_width=True,
+                      type="primary" if ss.lang == "de" else "secondary"):
+            ss.lang = "de"; st.rerun()
+        st.markdown(f"<div class='side-sec' style='margin-top:0.6rem;'>{T('data_sec')}</div>",
+                    unsafe_allow_html=True)
+        up = st.file_uploader(T("load_pf"), type="json", key="pf_upload", label_visibility="collapsed")
     if up is not None and not ss.get("_loaded_once"):
         try:
             data = json.load(up)
