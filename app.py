@@ -250,16 +250,10 @@ st.markdown(f"""
  .subtle {{ color:{MUTED}; font-size:0.95rem; }}
  .side-sec {{ font-size:0.72rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase;
               color:{MUTED}; margin:0.4rem 0 0.4rem 0.1rem; }}
- section[data-testid="stSidebar"] > div {{ height:100vh !important; }}
- section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {{
-              height:100vh !important; display:flex !important; flex-direction:column !important; }}
- section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{
-              flex:1 1 auto !important; min-height:0 !important; display:flex !important;
-              flex-direction:column !important; overflow:hidden !important; }}
- section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] > div {{
-              flex:1 1 auto !important; min-height:0 !important; display:flex !important;
-              flex-direction:column !important; }}
- .side-spacer {{ flex:1 1 auto; min-height:1rem; }}
+ section[data-testid="stSidebar"] {{ overflow:hidden !important; }}
+ section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] {{
+              border:none !important; background:transparent !important; padding:0 !important;
+              height:calc(100vh - 20.5rem) !important; overflow-y:auto !important; }}
  /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
  section[data-testid="stSidebar"] .stButton > button {{ justify-content:flex-start !important;
               text-align:left !important; font-weight:500 !important; border:none !important;
@@ -417,15 +411,14 @@ with st.sidebar:
     if st.button("\uFF0B\u2002" + T("new_portfolio"), use_container_width=True):
         new_portfolio(); st.rerun()
 
-    if ss.portfolios:
-        for pid, pf in ss.portfolios.items():
-            mark = "\u25CF\u2002" if pid == ss.active else "\u25CB\u2002"
-            if st.button(mark + pf["name"], key=f"sel_{pid}", use_container_width=True):
-                ss.active = pid; st.rerun()
-    else:
-        st.caption(T("no_portfolios"))
-
-    st.markdown("<div class='side-spacer'></div>", unsafe_allow_html=True)
+    with st.container(height=400, border=True):
+        if ss.portfolios:
+            for pid, pf in ss.portfolios.items():
+                mark = "\u25CF\u2002" if pid == ss.active else "\u25CB\u2002"
+                if st.button(mark + pf["name"], key=f"sel_{pid}", use_container_width=True):
+                    ss.active = pid; st.rerun()
+        else:
+            st.caption(T("no_portfolios"))
 
     st.markdown(f"<div class='side-sec'>{T('language')}</div>", unsafe_allow_html=True)
     lc1, lc2 = st.columns(2)
