@@ -22,7 +22,7 @@ CAT_DIR = {"Complexity": +1, "Efficiency": -1, "Risk": +1, "Strategy": -1, "Urge
 # i18n
 # --------------------------------------------------------------------------------------
 STR = {
- "en": {"app_title": "Portfolio Risk Analyzer", "configure": "Configure", "results": "Results",
+ "en": {"app_title": "IT Project Portfolio Risk Analyzer", "app_subtitle": "Decision support for IT project portfolio management (ITPPM)", "configure": "Configure", "results": "Results",
    "portfolios": "Portfolios", "new_portfolio": "New Portfolio", "no_portfolios": "No portfolios yet.",
    "no_pf_sel": "No Portfolio Selected", "create_pf": "Create a new portfolio to get started",
    "create_btn": "Create New Portfolio", "pf_config": "Portfolio Configuration", "pf_name": "Portfolio Name",
@@ -71,7 +71,7 @@ STR = {
    "limit": "limit", "actual": "actual", "min_avg": "min avg", "max_avg": "max avg",
    "flagged": "flagged project(s)", "no_restr": "No restrictions active.",
    "restr_note": "Values not set by you use the dataset's typical value, consistent with the prediction."},
- "de": {"app_title": "Portfolio-Risikoanalyse", "configure": "Konfigurieren", "results": "Ergebnisse",
+ "de": {"app_title": "IT-Projektportfolio-Risikoanalyse", "app_subtitle": "Entscheidungsunterst\u00fctzung f\u00fcr das IT-Projektportfoliomanagement (ITPPM)", "configure": "Konfigurieren", "results": "Ergebnisse",
    "portfolios": "Portfolios", "new_portfolio": "Neues Portfolio", "no_portfolios": "Noch keine Portfolios.",
    "no_pf_sel": "Kein Portfolio ausgew\u00e4hlt", "create_pf": "Erstelle ein Portfolio, um zu starten",
    "create_btn": "Neues Portfolio erstellen", "pf_config": "Portfolio-Konfiguration", "pf_name": "Portfolioname",
@@ -242,7 +242,7 @@ except Exception as e:
     MODEL = META = SPEC = CTX = None
     LOAD_ERROR = str(e)
 
-st.set_page_config(page_title="Portfolio Risk Assessment", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="IT Project Portfolio Risk Analyzer", layout="wide", initial_sidebar_state="expanded")
 
 # Minimal-CSS: Theme uebernimmt Widgets; hier nur Rahmen/Feinheiten + lesbarer Aktiv-Button
 st.markdown(f"""
@@ -382,8 +382,10 @@ def new_portfolio():
 # Sidebar
 # --------------------------------------------------------------------------------------
 with st.sidebar:
-    st.markdown(f"<div style='font-size:1.35rem; font-weight:700; color:{TEXT}; "
-                f"margin:0.2rem 0 1.1rem 0; text-align:center;'>{T('app_title')}</div>",
+    st.markdown(f"<div style='font-size:1.28rem; font-weight:700; color:{TEXT}; "
+                f"margin:0.2rem 0 0.2rem 0; text-align:center; line-height:1.25;'>{T('app_title')}</div>"
+                f"<div style='font-size:0.74rem; color:{MUTED}; text-align:center; "
+                f"margin:0 0 1.1rem 0; line-height:1.3;'>{T('app_subtitle')}</div>",
                 unsafe_allow_html=True)
     st.markdown(f"**{T('portfolios')}**")
     if st.button("\uFF0B  " + T("new_portfolio"), use_container_width=True):
