@@ -252,9 +252,9 @@ st.markdown(f"""
               color:{MUTED}; margin:0.4rem 0 0.4rem 0.1rem; }}
  section[data-testid="stSidebar"] {{ overflow:hidden !important; }}
  section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{ overflow:hidden !important; }}
- /* nur der Portfolio-Listencontainer scrollt */
- section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] {{ overflow-y:auto !important; }}
- .side-spacer {{ height:20vh; }}
+ /* Portfolio-Liste dehnt sich bis kurz vor die unteren Tools, nur sie scrollt */
+ section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] {{
+              height:calc(100vh - 21rem) !important; overflow-y:auto !important; }}
  /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
  section[data-testid="stSidebar"] .stButton > button {{ justify-content:flex-start !important;
               text-align:left !important; font-weight:500 !important; border:none !important;
@@ -412,7 +412,7 @@ with st.sidebar:
     if st.button("\uFF0B\u2002" + T("new_portfolio"), use_container_width=True):
         new_portfolio(); st.rerun()
 
-    with st.container(height=260, border=False):          # nur diese Liste scrollt
+    with st.container(height=400, border=False):          # nur diese Liste scrollt
         if ss.portfolios:
             for pid, pf in ss.portfolios.items():
                 mark = "\u25CF\u2002" if pid == ss.active else "\u25CB\u2002"
@@ -420,8 +420,6 @@ with st.sidebar:
                     ss.active = pid; st.rerun()
         else:
             st.caption(T("no_portfolios"))
-
-    st.markdown("<div class='side-spacer'></div>", unsafe_allow_html=True)
 
     st.markdown(f"<div class='side-sec'>{T('language')}</div>", unsafe_allow_html=True)
     lc1, lc2 = st.columns(2)
