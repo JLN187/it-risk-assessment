@@ -263,7 +263,7 @@ st.markdown(f"""
  /* aktives Portfolio deutlich hervorheben */
  section[data-testid="stSidebar"] .st-key-side_list .stButton > button[kind="primary"] {{
               background:{PANEL_2} !important; color:{TEXT} !important; font-weight:700 !important;
-              border-left:3px solid {GREEN} !important; border-radius:6px !important; }}
+              border-left:3px solid {TEXT} !important; border-radius:6px !important; }}
  /* Sprach-Flaggen: zentriert, kompakt, aktiver Zustand sichtbar */
  section[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton > button {{
               justify-content:center !important; text-align:center !important;
@@ -304,8 +304,8 @@ st.markdown(f"""
  .icon-btn > button {{ font-size:1.05rem !important; font-weight:800 !important;
                        height:2.5rem !important; min-height:2.5rem !important; padding:0 !important;
                        margin:0 !important; border:1px solid {BORDER} !important; }}
- .restr-label {{ font-size:0.78rem; color:{TEXT}; height:2.7rem; display:flex; align-items:flex-end;
-                 line-height:1.15; margin-bottom:0.2rem; }}
+ .restr-label {{ font-size:0.72rem; color:{TEXT}; height:3rem; display:flex; align-items:flex-end;
+                 line-height:1.1; margin-bottom:0.2rem; }}
  /* Multiselect-Tags (Restriktionen) lesbar: dunkler Chip, heller Text */
  [data-baseweb="tag"] {{ background-color:{PANEL_2} !important; color:{TEXT} !important;
                          border:1px solid {BORDER} !important; }}
@@ -322,10 +322,11 @@ st.markdown(f"""
  @keyframes flashrow {{ 0% {{ background:rgba(91,181,107,0.55); }} 100% {{ background:transparent; }} }}
  .proj-row {{ border-radius:6px; padding:0.15rem 0; }}
  .proj-row.flash {{ animation:flashrow 1.6s ease-out 1; }}
- /* Datei-Upload zentriert */
- [data-testid="stFileUploaderDropzone"] {{ justify-content:center; text-align:center; }}
- [data-testid="stFileUploaderDropzone"] > div {{ display:flex; flex-direction:column; align-items:center; }}
- [data-testid="stFileUploaderDropzoneInstructions"] {{ align-items:center; text-align:center; }}
+ /* Datei-Upload: nur der Button, keine Dropzone-Flaeche/Text */
+ [data-testid="stFileUploaderDropzone"] {{ background:transparent !important; border:none !important;
+              padding:0 !important; justify-content:center; }}
+ [data-testid="stFileUploaderDropzoneInstructions"] {{ display:none !important; }}
+ [data-testid="stFileUploaderDropzone"] button {{ width:100%; }}
  [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlockBorderWrapper"] {{ background:{BG}; }}
  /* aktiver Nav-/Sprach-Button: dunkles Highlight mit HELLEM Text (klarer Kontrast) */
  .stButton > button[kind="primary"] {{ background:{PANEL_2} !important; color:{TEXT} !important; border:1px solid {HEAD} !important; }}
@@ -412,7 +413,7 @@ with st.sidebar:
     if st.button("\uFF0B\u2002" + T("new_portfolio"), use_container_width=True):
         new_portfolio(); st.rerun()
 
-    with st.container(height=560, border=True, key="side_list"):
+    with st.container(height=640, border=True, key="side_list"):
         if ss.portfolios:
             for pid, pf in list(ss.portfolios.items()):
                 is_active = pid == ss.active
