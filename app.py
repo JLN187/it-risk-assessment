@@ -245,17 +245,14 @@ st.set_page_config(page_title="IT Project Portfolio Risk Analyzer", layout="wide
 
 st.markdown(f"""
 <style>
- .block-container {{ padding-top:4rem; padding-bottom:4rem; max-width:1800px; }}
+ .block-container {{ padding-top:1.6rem; padding-bottom:4rem; max-width:1800px; }}
  h1,h2,h3 {{ font-weight:600; letter-spacing:-0.01em; }}
  .subtle {{ color:{MUTED}; font-size:0.95rem; }}
  .side-sec {{ font-size:0.72rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase;
               color:{MUTED}; margin:0.4rem 0 0.4rem 0.1rem; }}
- /* Sidebar als Flex-Spalte -> Spacer fuellt Rest ohne Scrollbalken */
- section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{ height:100%; }}
- section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"]
-   > [data-testid="stVerticalBlock"] {{ min-height:calc(100vh - 3.5rem); display:flex;
-              flex-direction:column; }}
- .side-spacer {{ flex:1 1 auto; min-height:1rem; }}
+ section[data-testid="stSidebar"] {{ overflow:hidden !important; }}
+ section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{ overflow:hidden !important; }}
+ .side-spacer {{ height:50vh; }}
  /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
  section[data-testid="stSidebar"] .stButton > button {{ justify-content:flex-start !important;
               text-align:left !important; font-weight:500 !important; border:none !important;
@@ -1064,7 +1061,7 @@ active_pf = ss.portfolios.get(ss.active) if ss.active in ss.portfolios else None
 show_nav = bool(active_pf and active_pf.get("calculated"))
 
 if show_nav:
-    nav_l, _ = st.columns([0.32, 0.68])
+    nav_l, _ = st.columns([0.22, 0.78])
     with nav_l:
         n1, n2 = st.columns(2)
         if n1.button(T("configure"), use_container_width=True,
