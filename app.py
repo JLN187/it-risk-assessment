@@ -259,7 +259,8 @@ st.markdown(f"""
               min-height:0 !important; overflow:hidden !important; }}
  .st-key-side_list {{ border:none !important; border-radius:0 !important; background:transparent !important;
               box-shadow:none !important; outline:none !important; padding:0 !important;
-              flex:1 1 auto !important; min-height:0 !important; overflow-y:auto !important; }}
+              flex:1 1 auto !important; min-height:0 !important;
+              max-height:calc(100vh - 14rem) !important; overflow-y:auto !important; }}
  .st-key-side_list > div, .st-key-side_list [data-testid="stVerticalBlock"] {{
               border:none !important; background:transparent !important; box-shadow:none !important; }}
  .st-key-side_foot {{ flex:0 0 auto !important; }}
@@ -422,7 +423,7 @@ with st.sidebar:
 
     with st.container(height="stretch", border=True, key="side_list"):
         if ss.portfolios:
-            for pid, pf in ss.portfolios.items():
+            for pid, pf in list(ss.portfolios.items()):
                 mark = "\u25CF\u2002" if pid == ss.active else "\u25CB\u2002"
                 if st.button(mark + pf["name"], key=f"sel_{pid}", use_container_width=True):
                     ss.active = pid; st.rerun()
