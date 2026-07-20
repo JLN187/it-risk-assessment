@@ -257,7 +257,7 @@ st.markdown(f"""
               border:none !important; border-radius:0 !important; background:transparent !important;
               box-shadow:none !important; outline:none !important; }}
  section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] {{
-              padding:0 !important; height:calc(100vh - 15rem) !important; overflow-y:auto !important; }}
+              padding:0 !important; height:calc(100vh - 11rem) !important; overflow-y:auto !important; }}
  /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
  section[data-testid="stSidebar"] .stButton > button {{ justify-content:flex-start !important;
               text-align:left !important; font-weight:500 !important; border:none !important;
