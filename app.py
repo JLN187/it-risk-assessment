@@ -17,10 +17,6 @@ LEVEL_COLORS = {"Low": GREEN, "Medium": "#d9a441", "High": "#e5844d", "Critical"
 AGG_EN = ["N/A", "Low", "Medium", "High", "Very High"]
 CAT_DIR = {"Complexity": +1, "Efficiency": -1, "Risk": +1, "Strategy": -1, "Urgency": +1}
 
-# Hoehe der scrollbaren Portfolio-Liste. Groesser = Liste laenger -> Language/Data rutschen tiefer.
-# Beispiele: "calc(100vh - 22rem)" = Tools hoeher, "calc(100vh - 10rem)" = Tools ganz unten.
-SIDEBAR_LIST_HEIGHT = "calc(100vh - 6rem)"
-
 # --------------------------------------------------------------------------------------
 # i18n
 # --------------------------------------------------------------------------------------
@@ -255,9 +251,10 @@ st.markdown(f"""
  .side-sec {{ font-size:0.72rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase;
               color:{MUTED}; margin:0.4rem 0 0.4rem 0.1rem; }}
  section[data-testid="stSidebar"] {{ overflow:hidden !important; }}
+ section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{ height:100vh !important; }}
  .st-key-side_list {{ border:none !important; border-radius:0 !important; background:transparent !important;
               box-shadow:none !important; outline:none !important; padding:0 !important;
-              height:{SIDEBAR_LIST_HEIGHT} !important; overflow-y:auto !important; }}
+              overflow-y:auto !important; }}
  .st-key-side_list > div, .st-key-side_list [data-testid="stVerticalBlock"] {{
               border:none !important; background:transparent !important; box-shadow:none !important; }}
  /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
@@ -417,7 +414,7 @@ with st.sidebar:
     if st.button("\uFF0B\u2002" + T("new_portfolio"), use_container_width=True):
         new_portfolio(); st.rerun()
 
-    with st.container(height=400, border=True, key="side_list"):
+    with st.container(height="stretch", border=True, key="side_list"):
         if ss.portfolios:
             for pid, pf in ss.portfolios.items():
                 mark = "\u25CF\u2002" if pid == ss.active else "\u25CB\u2002"
