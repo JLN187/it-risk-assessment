@@ -251,9 +251,9 @@ st.markdown(f"""
  .side-sec {{ font-size:0.72rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase;
               color:{MUTED}; margin:0.4rem 0 0.4rem 0.1rem; }}
  section[data-testid="stSidebar"] {{ overflow:hidden !important; }}
- section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] {{
-              border:none !important; background:transparent !important; padding:0 !important;
-              height:calc(100vh - 20.5rem) !important; overflow-y:auto !important; }}
+ section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] {{
+              border:none !important; border-radius:0 !important; background:transparent !important;
+              padding:0 !important; height:calc(100vh - 16rem) !important; overflow-y:auto !important; }}
  /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
  section[data-testid="stSidebar"] .stButton > button {{ justify-content:flex-start !important;
               text-align:left !important; font-weight:500 !important; border:none !important;
