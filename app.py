@@ -306,6 +306,9 @@ st.markdown(f"""
                        margin:0 !important; border:1px solid {BORDER} !important; }}
  .restr-label {{ font-size:0.72rem; color:{TEXT}; height:3rem; display:flex; align-items:flex-end;
                  line-height:1.1; margin-bottom:0.2rem; }}
+ .restr-label-sm {{ height:1.4rem !important; align-items:flex-start !important; }}
+ .restr-rate {{ font-size:0.66rem !important; letter-spacing:-0.02em; white-space:nowrap;
+                overflow:hidden; text-overflow:ellipsis; height:2rem !important; }}
  /* Multiselect-Tags (Restriktionen) lesbar: dunkler Chip, heller Text */
  [data-baseweb="tag"] {{ background-color:{PANEL_2} !important; color:{TEXT} !important;
                          border:1px solid {BORDER} !important; }}
@@ -322,14 +325,14 @@ st.markdown(f"""
  @keyframes flashrow {{ 0% {{ background:rgba(91,181,107,0.55); }} 100% {{ background:transparent; }} }}
  .proj-row {{ border-radius:6px; padding:0.15rem 0; }}
  .proj-row.flash {{ animation:flashrow 1.6s ease-out 1; }}
- /* Datei-Upload: nur der Button, keine Dropzone-Flaeche/Text */
- [data-testid="stFileUploaderDropzone"] {{ background:transparent !important; border:none !important;
-              padding:0 !important; justify-content:center; }}
- [data-testid="stFileUploaderDropzoneInstructions"] {{ display:none !important; }}
- [data-testid="stFileUploaderDropzone"] button {{ width:100%; }}
+ /* Datei-Upload zentriert */
+ [data-testid="stFileUploaderDropzone"] {{ justify-content:center; text-align:center; }}
+ [data-testid="stFileUploaderDropzone"] > div {{ display:flex; flex-direction:column; align-items:center; }}
+ [data-testid="stFileUploaderDropzoneInstructions"] {{ align-items:center; text-align:center; }}
  [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlockBorderWrapper"] {{ background:{BG}; }}
  /* aktiver Nav-/Sprach-Button: dunkles Highlight mit HELLEM Text (klarer Kontrast) */
- .stButton > button[kind="primary"] {{ background:{PANEL_2} !important; color:{TEXT} !important; border:1px solid {HEAD} !important; }}
+ .stButton > button[kind="primary"] {{ background:{PANEL_2} !important; color:{TEXT} !important; border:1px solid {HEAD} !important; box-shadow:none !important; outline:none !important; }}
+ .stButton > button[kind="primary"]:focus, .stButton > button[kind="primary"]:active, .stButton > button[kind="primary"]:focus-visible {{ box-shadow:none !important; outline:none !important; }}
  .stButton > button[kind="primary"] p, .stButton > button[kind="primary"] div {{ color:{TEXT} !important; }}
  div[data-baseweb="slider"] div[role="slider"] {{ background:{HEAD} !important; border:2px solid {TEXT} !important; box-shadow:0 0 0 4px rgba(216,213,205,0.20) !important; }}
  [data-testid="stThumbValue"] {{ color:{TEXT} !important; font-weight:700 !important;
@@ -413,7 +416,7 @@ with st.sidebar:
     if st.button("\uFF0B\u2002" + T("new_portfolio"), use_container_width=True):
         new_portfolio(); st.rerun()
 
-    with st.container(height=640, border=True, key="side_list"):
+    with st.container(height=720, border=True, key="side_list"):
         if ss.portfolios:
             for pid, pf in list(ss.portfolios.items()):
                 is_active = pid == ss.active
@@ -575,7 +578,7 @@ def render_restrictions(pf):
                     hi = None if unbounded else float(SPEC[f]["max"]) * max(len(pf["projects"]), 1)
                     cur = float(r["limits"].get(f, base.get(f, lo)))
                     cur = max(cur, lo) if hi is None else min(max(cur, lo), hi)
-                    st.markdown(f"<div class='restr-label'>{L(f)}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='restr-label restr-label-sm'>{L(f)}</div>", unsafe_allow_html=True)
                     r["limits"][f] = st.number_input(" ", min_value=lo, max_value=hi, value=cur,
                                                      step=_step(f), key=f"lim_{f}",
                                                      label_visibility="collapsed")
@@ -587,7 +590,7 @@ def render_restrictions(pf):
                 lo, hi = float(SPEC[f]["min"]), float(SPEC[f]["max"])
                 cur = min(max(float(r["limits"][f]), lo), hi)
                 is_rate = SPEC[f].get("kind") == "rate"
-                st.markdown(f"<div class='restr-label'>{L(f)} ({tag}{', %' if is_rate else ''})</div>",
+                st.markdown(f"<div class='restr-label restr-rate'>{L(f)} ({tag}{', %' if is_rate else ''})</div>",
                             unsafe_allow_html=True)
                 if is_rate:
                     val = st.number_input(" ", min_value=lo * 100, max_value=hi * 100,
