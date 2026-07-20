@@ -19,7 +19,7 @@ CAT_DIR = {"Complexity": +1, "Efficiency": -1, "Risk": +1, "Strategy": -1, "Urge
 
 # Hoehe der scrollbaren Portfolio-Liste. Groesser = Liste laenger -> Language/Data rutschen tiefer.
 # Beispiele: "calc(100vh - 22rem)" = Tools hoeher, "calc(100vh - 10rem)" = Tools ganz unten.
-SIDEBAR_LIST_HEIGHT = "calc(100vh - 12rem)"
+SIDEBAR_LIST_HEIGHT = "calc(100vh - 10rem)"
 
 # --------------------------------------------------------------------------------------
 # i18n
