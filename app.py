@@ -56,7 +56,10 @@ STR = {
    "tip_cnt": "Expected number of projects at High or Critical risk (sum of individual probabilities).",
    "tip_agg": "How much risk this category contributes overall. Each feature in it is set to a matching value (features where a higher value means less risk are mapped inversely).",
    "load_err": "Model artifacts could not be loaded. Please run masterskript_final.py locally first.",
-   "language": "Language", "risk_word": "risk", "save_pf": "Save portfolios", "load_pf": "Load portfolios (JSON)", "load_err_pf": "Could not read file.",
+   "language": "Language", "risk_word": "risk", "save_pf": "Download portfolios (JSON)",
+   "advice_title": "How to reduce this risk",
+   "advice_up": "The biggest risk driver is \u201e{feat}\u201c \u2013 lowering it has the strongest effect.",
+   "advice_down": "\u201e{feat}\u201c already lowers the risk \u2013 strengthening it further helps most.", "load_pf": "Load portfolios (JSON)", "load_err_pf": "Could not read file.",
    "nom_warn": "Not set by this slider (no ranking possible): {names}. Use \u201cSet individually\u201d if needed.",
    "restrictions": "Restrictions", "restr_on": "Apply restrictions",
    "restr_hint": "Optional. Define portfolio limits; violations are flagged in the results.",
@@ -102,7 +105,10 @@ STR = {
    "tip_cnt": "Erwartete Anzahl Projekte mit High- oder Critical-Risiko (Summe der Einzelwahrscheinlichkeiten).",
    "tip_agg": "Wie viel Risiko diese Kategorie insgesamt beitr\u00e4gt. Jedes Merkmal darin wird auf einen passenden Wert gesetzt (Merkmale, bei denen ein h\u00f6herer Wert weniger Risiko bedeutet, werden gespiegelt abgebildet).",
    "load_err": "Modell-Artefakte konnten nicht geladen werden. Bitte zuerst masterskript_final.py lokal ausf\u00fchren.",
-   "language": "Sprache", "risk_word": "Risiko", "save_pf": "Portfolios speichern", "load_pf": "Portfolios laden (JSON)", "load_err_pf": "Datei konnte nicht gelesen werden.",
+   "language": "Sprache", "risk_word": "Risiko", "save_pf": "Portfolios herunterladen (JSON)",
+   "advice_title": "So l\u00e4sst sich das Risiko senken",
+   "advice_up": "Gr\u00f6\u00dfter Risikotreiber ist \u201e{feat}\u201c \u2013 eine Verringerung wirkt am st\u00e4rksten.",
+   "advice_down": "\u201e{feat}\u201c senkt das Risiko bereits \u2013 eine weitere St\u00e4rkung hilft am meisten.", "load_pf": "Portfolios laden (JSON)", "load_err_pf": "Datei konnte nicht gelesen werden.",
    "nom_warn": "Von diesem Regler nicht gesetzt (keine Rangordnung m\u00f6glich): {names}. Bei Bedarf \u201eEinzeln einstellen\u201c nutzen.",
    "restrictions": "Restriktionen", "restr_on": "Restriktionen anwenden",
    "restr_hint": "Optional. Portfolio-Grenzwerte festlegen; Verletzungen werden in den Ergebnissen markiert.",
@@ -275,8 +281,8 @@ st.markdown(f"""
  .nom-warn {{ color:#d9a441; font-size:0.74rem; line-height:1.2; margin:0.1rem 0 0.4rem 0;
              min-height:2.4rem; overflow:hidden; }}
  .icon-btn > button {{ font-size:1.15rem !important; font-weight:800 !important;
-                       height:2.4rem !important; padding:0 !important; }}
- .restr-label {{ font-size:0.78rem; color:{TEXT}; min-height:2.7rem; display:flex; align-items:flex-end;
+                       height:2.5rem !important; padding:0 !important; margin:0 !important; }}
+ .restr-label {{ font-size:0.78rem; color:{TEXT}; height:2.7rem; display:flex; align-items:flex-end;
                  line-height:1.15; margin-bottom:0.2rem; }}
  /* Multiselect-Tags (Restriktionen) lesbar: dunkler Chip, heller Text */
  [data-baseweb="tag"] {{ background-color:{PANEL_2} !important; color:{TEXT} !important;
@@ -289,8 +295,8 @@ st.markdown(f"""
  .subtle-btn > button:hover {{ border-color:{HEAD} !important; color:{TEXT} !important; }}
  .subtle-btn > button p {{ color:{MUTED} !important; }}
  /* Kategorie-Koerper (Aggregat vs. einzeln gesetzt) auf gleiche Mindesthoehe */
- .cat-body {{ min-height:6.2rem; }}
- .eqcard {{ min-height:15.5rem; display:flex; flex-direction:column; }}
+ .cat-body {{ min-height:7.8rem; }}
+ .eqcard {{ height:16.5rem; display:flex; flex-direction:column; }}
  @keyframes flashrow {{ 0% {{ background:rgba(91,181,107,0.55); }} 100% {{ background:transparent; }} }}
  .proj-row {{ border-radius:6px; padding:0.15rem 0; }}
  .proj-row.flash {{ animation:flashrow 1.6s ease-out 1; }}
@@ -343,6 +349,14 @@ def vopt(v):
     return VALUE_DE.get(v, v) if ss.lang == "de" else v
 
 
+def risk_label(cls):
+    """Korrekt flektiertes Risiko-Label: 'Niedriges Risiko' / 'Low risk'."""
+    if ss.lang == "de":
+        forms = {"Low": "Niedriges", "Medium": "Mittleres", "High": "Hohes", "Critical": "Kritisches"}
+        return f"{forms.get(cls, vopt(cls))} Risiko"
+    return f"{cls} risk"
+
+
 def default_proj_name(pf):
     return f"{T('project_default')} {len(pf['projects']) + 1}"
 
@@ -373,7 +387,7 @@ with st.sidebar:
         st.caption(T("no_portfolios"))
 
     # Abstand -> weniger wichtige Dinge nach unten
-    st.markdown("<div style='height:52vh;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:62vh;'></div>", unsafe_allow_html=True)
 
     # Sprache knapp ueber dem Upload
     st.markdown(f"<div class='subtle' style='font-size:0.78rem; margin-bottom:0.3rem;'>{T('language')}</div>",
@@ -723,19 +737,19 @@ def render_category_card(pid, crit, feats, draft):
     with st.container(border=True):
         active = saved is not None and any(v is not None for v in saved.values())
         h1, h2 = st.columns([0.82, 0.18])
-        badge = " \u2713" if active else ""
-        h1.markdown(f"<div class='cat-header'>{CAT(crit)}"
-                    f"<span style='color:{GREEN};'>{badge}</span></div>", unsafe_allow_html=True)
+        h1.markdown(f"<div class='cat-header'>{CAT(crit)}</div>", unsafe_allow_html=True)
         with h2:
             if st.button("\u2699", key=f"btn_{key}", help=T("fine_tune"), use_container_width=True,
                          type="primary" if active else "secondary"):
                 open_cat_dialog(pid, crit, feats)
         if saved is not None:
             n = sum(v is not None for v in saved.values())
-            st.markdown("<div class='cat-body'>"
-                        f"<div style='font-size:0.86rem; margin:0.4rem 0 0.9rem 0; color:{GREEN}; "
-                        f"font-weight:600;'>{T('n_individual', n=n, t=len(feats))}</div>",
-                        unsafe_allow_html=True)
+            st.markdown(
+                "<div class='cat-body' style='display:flex; flex-direction:column;"
+                " align-items:center; justify-content:center;'>"
+                f"<div style='font-size:0.98rem; font-weight:600; color:{GREEN}; text-align:center;"
+                f" margin:0.2rem 0 0.9rem 0;'>\u2713 {T('n_individual', n=n, t=len(feats))}</div>",
+                unsafe_allow_html=True)
             if st.button(T("reset_cat"), key=f"rst_{key}", use_container_width=True):
                 ss["catvals"].pop(key, None); st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
@@ -763,10 +777,10 @@ def render_configure(pf):
                 for i, proj in enumerate(pf["projects"]):
                     disp = f"{T('project_default')} {i + 1}" if proj.get("auto") else proj["name"]
                     flash = " flash" if i == flash_i else ""
-                    c1, c2 = st.columns([0.82, 0.18], vertical_alignment="center")
+                    c1, c2 = st.columns([0.85, 0.15], vertical_alignment="center", gap="small")
                     c1.markdown(f"<div class='proj-row{flash}' style='display:flex; align-items:center;"
-                                f" min-height:2.4rem; border-left:3px solid {HEAD}; padding-left:0.6rem;"
-                                f" color:{TEXT}; font-size:0.92rem; font-weight:700;'>{disp}</div>",
+                                f" height:2.5rem; border-left:3px solid {HEAD}; padding-left:0.6rem;"
+                                f" border-radius:6px; color:{TEXT}; font-size:0.92rem; font-weight:700;'>{disp}</div>",
                                 unsafe_allow_html=True)
                     with c2:
                         st.markdown("<div class='icon-btn'>", unsafe_allow_html=True)
@@ -857,6 +871,24 @@ def render_project_details(order, proba, params):
                 unsafe_allow_html=True)
     st.markdown(_driver_rows(neg, maxabs) or "<span class='subtle'>\u2014</span>", unsafe_allow_html=True)
     st.caption(T("default_expl"))
+
+    # Konkreter Handlungsratschlag auf Basis der staerksten Treiber
+    if pos or neg:
+        up_name = L(pos[0][0]) if pos else None
+        down_name = L(neg[0][0]) if neg else None
+        tips = []
+        if up_name:
+            tips.append(T("advice_up", feat=up_name))
+        if down_name:
+            tips.append(T("advice_down", feat=down_name))
+        st.markdown(
+            f"<div style='margin-top:0.7rem; padding:0.7rem 0.9rem; background:{PANEL_2};"
+            f" border-left:3px solid {HEAD}; border-radius:6px;'>"
+            f"<div style='font-weight:700; color:{HEAD}; font-size:0.82rem; margin-bottom:0.3rem;'>"
+            f"\U0001F4A1 {T('advice_title')}</div>"
+            f"<div style='color:{TEXT}; font-size:0.82rem; line-height:1.45;'>{' '.join(tips)}</div></div>",
+            unsafe_allow_html=True)
+
     st.markdown(f"<div class='cat-header' style='margin-top:0.8rem;'>{T('set_params')}</div>", unsafe_allow_html=True)
     for crit, feats in mb.KUB_GROUPS.items():
         setf = [(f, params[f]) for f in feats if params.get(f) is not None]
@@ -884,7 +916,7 @@ def render_project_card(i, proj):
         head_l, head_r = st.columns([0.72, 0.28], vertical_alignment="center")
         head_l.markdown(f"<div style='font-size:1.1rem; font-weight:600; color:{TEXT};'>{proj['name']} "
                         f"<span style='color:{MUTED}; font-weight:400;'>&middot;</span> "
-                        f"<span style='color:{color}; font-weight:700;'>{vopt(pred)} {T('risk_word')}</span></div>"
+                        f"<span style='color:{color}; font-weight:700;'>{risk_label(pred)}</span></div>"
                         f"<div class='info' style='color:{MUTED}; font-size:0.85rem; margin-top:0.1rem;'>"
                         f"<span title='{T('tip_score')}'>{T('exp_score')}: {score:.2f} &#9432;</span> &middot; "
                         f"<span title='{T('rel_tip')}'>{T('reliability')}: "
@@ -963,20 +995,22 @@ def render_results(pf):
                         f"{_dist_chart(per_project)}</div>", unsafe_allow_html=True)
     with c2:
         with st.container(border=True):
-            body = f"<div class='cat-header'>{T('restr_check')}</div>"
+            body = f"<div class='eqcard'><div class='cat-header'>{T('restr_check')}</div>"
             if not rows:
                 body += f"<div class='subtle' style='margin-top:0.5rem;'>{T('no_restr')}</div>"
             else:
                 for label, actual, limit, ok in rows:
                     c = GREEN if ok else RED
-                    body += (f"<div style='display:flex; align-items:center; gap:0.6rem; padding:0.22rem 0;"
+                    body += (f"<div style='display:flex; align-items:center; gap:0.6rem; height:2.1rem;"
                              f" border-bottom:1px solid {BORDER};'>"
-                             f"<div style='flex:1; color:{TEXT}; font-size:0.8rem;'>{label}</div>"
+                             f"<div style='flex:1; color:{TEXT}; font-size:0.8rem; line-height:1.1;"
+                             f" overflow:hidden; text-overflow:ellipsis; white-space:nowrap;'>{label}</div>"
                              f"<div style='width:110px; text-align:right; color:{MUTED}; font-size:0.75rem;'>{actual}</div>"
                              f"<div style='width:100px; text-align:right; color:{MUTED}; font-size:0.75rem;'>{limit}</div>"
                              f"<div style='width:64px; text-align:right; color:{c}; font-weight:700; font-size:0.75rem;'>"
                              f"{T('ok') if ok else T('violated')}</div></div>")
                 body += f"<div class='subtle' style='margin-top:0.4rem; font-size:0.72rem;'>{T('restr_note')}</div>"
+            body += "</div>"
             st.markdown(body, unsafe_allow_html=True)
 
     # ---- Zeile 3: Projektkarten (2 Spalten) ----
@@ -991,7 +1025,7 @@ def render_results(pf):
     # Speichern ergibt nach der Auswertung Sinn -> hier prominent anbieten
     st.markdown("<div style='height:1.2rem;'></div>", unsafe_allow_html=True)
     _, sc, _ = st.columns([0.32, 0.36, 0.32])
-    sc.download_button("\U0001F4BE  " + T("save_pf"),
+    sc.download_button(T("save_pf"),
                        data=json.dumps({"portfolios": ss.portfolios}, indent=2, ensure_ascii=False),
                        file_name="portfolios.json", mime="application/json",
                        use_container_width=True)
