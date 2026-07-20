@@ -258,7 +258,8 @@ st.markdown(f"""
               min-height:0 !important; }}
  .st-key-side_list {{ border:none !important; border-radius:0 !important; background:transparent !important;
               box-shadow:none !important; outline:none !important; padding:0 !important;
-              flex:1 1 auto !important; min-height:0 !important; overflow-y:auto !important; }}
+              flex:1 1 auto !important; min-height:0 !important;
+              max-height:calc(100vh - 15rem) !important; overflow-y:auto !important; }}
  .st-key-side_list > div, .st-key-side_list [data-testid="stVerticalBlock"] {{
               border:none !important; background:transparent !important; box-shadow:none !important; }}
  /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
