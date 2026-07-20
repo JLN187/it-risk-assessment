@@ -19,7 +19,7 @@ CAT_DIR = {"Complexity": +1, "Efficiency": -1, "Risk": +1, "Strategy": -1, "Urge
 
 # Hoehe der scrollbaren Portfolio-Liste. Groesser = Liste laenger -> Language/Data rutschen tiefer.
 # Beispiele: "calc(100vh - 22rem)" = Tools hoeher, "calc(100vh - 10rem)" = Tools ganz unten.
-SIDEBAR_LIST_HEIGHT = "calc(100vh - 10rem)"
+SIDEBAR_LIST_HEIGHT = "calc(100vh - 12rem)"
 
 # --------------------------------------------------------------------------------------
 # i18n
@@ -255,13 +255,11 @@ st.markdown(f"""
  .side-sec {{ font-size:0.72rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase;
               color:{MUTED}; margin:0.4rem 0 0.4rem 0.1rem; }}
  section[data-testid="stSidebar"] {{ overflow:hidden !important; }}
- section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"],
- section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] > div,
- section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlock"] {{
-              border:none !important; border-radius:0 !important; background:transparent !important;
-              box-shadow:none !important; outline:none !important; }}
- section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:not(.st-key-side_foot) {{
-              padding:0 !important; height:{SIDEBAR_LIST_HEIGHT} !important; overflow-y:auto !important; }}
+ .st-key-side_list {{ border:none !important; border-radius:0 !important; background:transparent !important;
+              box-shadow:none !important; outline:none !important; padding:0 !important;
+              height:{SIDEBAR_LIST_HEIGHT} !important; overflow-y:auto !important; }}
+ .st-key-side_list > div, .st-key-side_list [data-testid="stVerticalBlock"] {{
+              border:none !important; background:transparent !important; box-shadow:none !important; }}
  /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
  section[data-testid="stSidebar"] .stButton > button {{ justify-content:flex-start !important;
               text-align:left !important; font-weight:500 !important; border:none !important;
@@ -419,7 +417,7 @@ with st.sidebar:
     if st.button("\uFF0B\u2002" + T("new_portfolio"), use_container_width=True):
         new_portfolio(); st.rerun()
 
-    with st.container(height=400, border=True):
+    with st.container(height=400, border=True, key="side_list"):
         if ss.portfolios:
             for pid, pf in ss.portfolios.items():
                 mark = "\u25CF\u2002" if pid == ss.active else "\u25CB\u2002"
