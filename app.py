@@ -252,9 +252,9 @@ st.markdown(f"""
               color:{MUTED}; margin:0.4rem 0 0.4rem 0.1rem; }}
  section[data-testid="stSidebar"] {{ overflow:hidden !important; }}
  section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{ overflow:hidden !important; }}
- /* Portfolio-Liste dehnt sich bis kurz vor die unteren Tools, nur sie scrollt */
  section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] {{
-              height:calc(100vh - 21rem) !important; overflow-y:auto !important; }}
+              border:none !important; background:transparent !important; padding:0 !important;
+              height:calc(100vh - 22rem) !important; min-height:5rem !important; overflow-y:auto !important; }}
  /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
  section[data-testid="stSidebar"] .stButton > button {{ justify-content:flex-start !important;
               text-align:left !important; font-weight:500 !important; border:none !important;
@@ -412,7 +412,7 @@ with st.sidebar:
     if st.button("\uFF0B\u2002" + T("new_portfolio"), use_container_width=True):
         new_portfolio(); st.rerun()
 
-    with st.container(height=400, border=False):          # nur diese Liste scrollt
+    with st.container(height=400, border=True):           # Wrapper existiert -> per CSS gestreckt
         if ss.portfolios:
             for pid, pf in ss.portfolios.items():
                 mark = "\u25CF\u2002" if pid == ss.active else "\u25CB\u2002"
