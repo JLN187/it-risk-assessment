@@ -58,8 +58,8 @@ STR = {
    "load_err": "Model artifacts could not be loaded. Please run masterskript_final.py locally first.",
    "language": "Language", "risk_word": "risk", "save_pf": "Download portfolios (JSON)",
    "advice_title": "How to reduce this risk",
-   "advice_up": "The biggest risk driver is \u201e{feat}\u201c \u2013 lowering it has the strongest effect.",
-   "advice_down": "\u201e{feat}\u201c already lowers the risk \u2013 strengthening it further helps most.", "load_pf": "Load portfolios (JSON)", "load_err_pf": "Could not read file.",
+   "default_tag": "default", "advice_up": "Biggest risk drivers: {feats} \u2013 lowering these has the strongest effect.",
+   "advice_down": "Already lowering the risk: {feats} \u2013 strengthening these helps most.", "load_pf": "Load portfolios (JSON)", "load_err_pf": "Could not read file.",
    "nom_warn": "Not set by this slider (no ranking possible): {names}. Use \u201cSet individually\u201d if needed.",
    "restrictions": "Restrictions", "restr_on": "Apply restrictions",
    "restr_hint": "Optional. Define portfolio limits; violations are flagged in the results.",
@@ -107,8 +107,8 @@ STR = {
    "load_err": "Modell-Artefakte konnten nicht geladen werden. Bitte zuerst masterskript_final.py lokal ausf\u00fchren.",
    "language": "Sprache", "risk_word": "Risiko", "save_pf": "Portfolios herunterladen (JSON)",
    "advice_title": "So l\u00e4sst sich das Risiko senken",
-   "advice_up": "Gr\u00f6\u00dfter Risikotreiber ist \u201e{feat}\u201c \u2013 eine Verringerung wirkt am st\u00e4rksten.",
-   "advice_down": "\u201e{feat}\u201c senkt das Risiko bereits \u2013 eine weitere St\u00e4rkung hilft am meisten.", "load_pf": "Portfolios laden (JSON)", "load_err_pf": "Datei konnte nicht gelesen werden.",
+   "default_tag": "Standardwert", "advice_up": "Gr\u00f6\u00dfte Risikotreiber: {feats} \u2013 eine Verringerung wirkt am st\u00e4rksten.",
+   "advice_down": "Senken das Risiko bereits: {feats} \u2013 eine weitere St\u00e4rkung hilft am meisten.", "load_pf": "Portfolios laden (JSON)", "load_err_pf": "Datei konnte nicht gelesen werden.",
    "nom_warn": "Von diesem Regler nicht gesetzt (keine Rangordnung m\u00f6glich): {names}. Bei Bedarf \u201eEinzeln einstellen\u201c nutzen.",
    "restrictions": "Restriktionen", "restr_on": "Restriktionen anwenden",
    "restr_hint": "Optional. Portfolio-Grenzwerte festlegen; Verletzungen werden in den Ergebnissen markiert.",
@@ -252,7 +252,7 @@ st.markdown(f"""
  .subtle {{ color:{MUTED}; font-size:0.95rem; }}
  .cat-header {{ color:{TEXT}; text-transform:uppercase; letter-spacing:0.14em; font-size:0.92rem; font-weight:800;
                  border-left:3px solid {HEAD}; padding-left:0.55rem; display:flex; align-items:center;
-                 min-height:2.4rem; line-height:1; margin:0; }}
+                 min-height:2.4rem; line-height:1; margin:0 0 0.9rem 0; }}
  .param-label {{ font-weight:600; font-size:0.88rem; margin:0.5rem 0 0.1rem 0; color:{TEXT}; }}
  .param-label span, .info span {{ cursor:help; }}
  .tick-wrap {{ position:relative; height:28px; margin:-0.5rem 9px 0.35rem 9px; }}
@@ -280,8 +280,10 @@ st.markdown(f"""
  [data-testid="stNumberInputContainer"] {{ background:{PANEL_2} !important; }}
  .nom-warn {{ color:#d9a441; font-size:0.74rem; line-height:1.2; margin:0.1rem 0 0.4rem 0;
              min-height:2.4rem; overflow:hidden; }}
- .icon-btn > button {{ font-size:1.15rem !important; font-weight:800 !important;
-                       height:2.5rem !important; padding:0 !important; margin:0 !important; }}
+ .icon-btn {{ margin:0 !important; }}
+ .icon-btn > button {{ font-size:1.05rem !important; font-weight:800 !important;
+                       height:2.5rem !important; min-height:2.5rem !important; padding:0 !important;
+                       margin:0 !important; border:1px solid {BORDER} !important; }}
  .restr-label {{ font-size:0.78rem; color:{TEXT}; height:2.7rem; display:flex; align-items:flex-end;
                  line-height:1.15; margin-bottom:0.2rem; }}
  /* Multiselect-Tags (Restriktionen) lesbar: dunkler Chip, heller Text */
@@ -295,7 +297,7 @@ st.markdown(f"""
  .subtle-btn > button:hover {{ border-color:{HEAD} !important; color:{TEXT} !important; }}
  .subtle-btn > button p {{ color:{MUTED} !important; }}
  /* Kategorie-Koerper (Aggregat vs. einzeln gesetzt) auf gleiche Mindesthoehe */
- .cat-body {{ min-height:7.8rem; }}
+ .cat-body {{ height:6.4rem; }}
  .eqcard {{ height:16.5rem; display:flex; flex-direction:column; }}
  @keyframes flashrow {{ 0% {{ background:rgba(91,181,107,0.55); }} 100% {{ background:transparent; }} }}
  .proj-row {{ border-radius:6px; padding:0.15rem 0; }}
@@ -347,6 +349,14 @@ def CAT(crit):
 
 def vopt(v):
     return VALUE_DE.get(v, v) if ss.lang == "de" else v
+
+
+def _join_names(names):
+    q = [f"\u201e{n}\u201c" for n in names]
+    if len(q) <= 1:
+        return q[0] if q else ""
+    sep = " und " if ss.lang == "de" else " and "
+    return ", ".join(q[:-1]) + sep + q[-1]
 
 
 def risk_label(cls):
@@ -747,12 +757,11 @@ def render_category_card(pid, crit, feats, draft):
             st.markdown(
                 "<div class='cat-body' style='display:flex; flex-direction:column;"
                 " align-items:center; justify-content:center;'>"
-                f"<div style='font-size:0.98rem; font-weight:600; color:{GREEN}; text-align:center;"
-                f" margin:0.2rem 0 0.9rem 0;'>\u2713 {T('n_individual', n=n, t=len(feats))}</div>",
+                f"<div style='font-size:0.95rem; font-weight:600; color:{GREEN}; text-align:center;'>"
+                f"\u2713 {T('n_individual', n=n, t=len(feats))}</div></div>",
                 unsafe_allow_html=True)
             if st.button(T("reset_cat"), key=f"rst_{key}", use_container_width=True):
                 ss["catvals"].pop(key, None); st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
             draft.update(saved)
         else:
             draft.update(render_category_aggregate(pid, crit, feats))
@@ -850,9 +859,10 @@ def _driver_rows(items, maxabs):
     rows = ""
     for feat, v, is_set in items:
         c = RED if v > 0 else GREEN
-        tag = "" if is_set else f" <span style='color:{MUTED}; font-size:0.72rem;'>(default)</span>"
-        rows += (f"<div style='display:flex; align-items:center; gap:0.7rem; margin:0.2rem 0;'>"
-                 f"<div style='width:190px; font-size:0.8rem; color:{TEXT};'>{L(feat)}{tag}</div>"
+        tag = "" if is_set else f"<span style='color:{MUTED}; font-size:0.68rem;'> ({T('default_tag')})</span>"
+        rows += (f"<div style='display:flex; align-items:center; gap:0.7rem; height:1.9rem;'>"
+                 f"<div style='width:190px; font-size:0.8rem; color:{TEXT}; white-space:nowrap;"
+                 f" overflow:hidden; text-overflow:ellipsis;'>{L(feat)}{tag}</div>"
                  f"<div style='flex:1; background:{PANEL_2}; border-radius:5px; height:9px;'>"
                  f"<div style='width:{abs(v)/maxabs*100:.0f}%; background:{c}; height:9px; border-radius:5px;'></div></div>"
                  f"<div style='width:52px; text-align:right; color:{c}; font-size:0.78rem; font-weight:600;'>{v:+.2f}</div></div>")
@@ -872,15 +882,15 @@ def render_project_details(order, proba, params):
     st.markdown(_driver_rows(neg, maxabs) or "<span class='subtle'>\u2014</span>", unsafe_allow_html=True)
     st.caption(T("default_expl"))
 
-    # Konkreter Handlungsratschlag auf Basis der staerksten Treiber
+    # Konkreter Handlungsratschlag: je bis zu drei staerkste Treiber namentlich
     if pos or neg:
-        up_name = L(pos[0][0]) if pos else None
-        down_name = L(neg[0][0]) if neg else None
+        up_names = [L(f) for f, _, _ in pos[:3]]
+        down_names = [L(f) for f, _, _ in neg[:3]]
         tips = []
-        if up_name:
-            tips.append(T("advice_up", feat=up_name))
-        if down_name:
-            tips.append(T("advice_down", feat=down_name))
+        if up_names:
+            tips.append(T("advice_up", feats=_join_names(up_names)))
+        if down_names:
+            tips.append(T("advice_down", feats=_join_names(down_names)))
         st.markdown(
             f"<div style='margin-top:0.7rem; padding:0.7rem 0.9rem; background:{PANEL_2};"
             f" border-left:3px solid {HEAD}; border-radius:6px;'>"
@@ -889,20 +899,24 @@ def render_project_details(order, proba, params):
             f"<div style='color:{TEXT}; font-size:0.82rem; line-height:1.45;'>{' '.join(tips)}</div></div>",
             unsafe_allow_html=True)
 
-    st.markdown(f"<div class='cat-header' style='margin-top:0.8rem;'>{T('set_params')}</div>", unsafe_allow_html=True)
-    for crit, feats in mb.KUB_GROUPS.items():
-        setf = [(f, params[f]) for f in feats if params.get(f) is not None]
-        if not setf:
-            continue
-        with st.expander(CAT(crit)):
-            rows = ""
-            for f, v in setf:
-                val = round(v, 2) if isinstance(v, float) else vopt(v)
-                rows += (f"<div style='display:flex; justify-content:space-between; padding:0.2rem 0;"
-                         f" border-bottom:1px solid {BORDER};'>"
-                         f"<span style='color:{MUTED};'>{L(f)}</span>"
-                         f"<span style='font-weight:600; color:{TEXT};'>{val}</span></div>")
-            st.markdown(rows, unsafe_allow_html=True)
+    st.markdown(f"<div class='cat-header' style='margin:1.2rem 0 0.8rem 0;'>{T('set_params')}</div>",
+                unsafe_allow_html=True)
+    set_crits = [(crit, feats) for crit, feats in mb.KUB_GROUPS.items()
+                 if any(params.get(f) is not None for f in feats)]
+    for rs in range(0, len(set_crits), 2):                    # zweispaltig, spart Breite
+        cols = st.columns(2, gap="small")
+        for col, (crit, feats) in zip(cols, set_crits[rs:rs + 2]):
+            setf = [(f, params[f]) for f in feats if params.get(f) is not None]
+            with col:
+                with st.expander(CAT(crit)):
+                    rows = ""
+                    for f, v in setf:
+                        val = round(v, 2) if isinstance(v, float) else vopt(v)
+                        rows += (f"<div style='display:flex; justify-content:space-between; padding:0.2rem 0;"
+                                 f" border-bottom:1px solid {BORDER};'>"
+                                 f"<span style='color:{MUTED};'>{L(f)}</span>"
+                                 f"<span style='font-weight:600; color:{TEXT};'>{val}</span></div>")
+                    st.markdown(rows, unsafe_allow_html=True)
 
 
 def render_project_card(i, proj):
