@@ -57,8 +57,8 @@ STR = {
    "load_err": "Model artifacts could not be loaded. Please run masterskript_final.py locally first.",
    "language": "Language", "data_sec": "Data", "risk_word": "risk", "save_pf": "Download portfolios (JSON)",
    "advice_title": "How to reduce this risk",
-   "default_tag": "default", "advice_up": "Biggest risk drivers: {feats} \u2013 lowering these has the strongest effect.",
-   "advice_down": "Already lowering the risk: {feats} \u2013 strengthening these helps most.", "load_pf": "Load portfolios (JSON)", "load_err_pf": "Could not read file.",
+   "default_tag": "default", "advice_up": "The characteristics that push this project's risk up the most are {feats}. Improving these \u2013 for example by strengthening them or reducing their severity \u2013 has the strongest effect on lowering the overall risk.",
+   "advice_down": "The characteristics that already help keep the risk down are {feats}. Reinforcing these further is the most effective way to protect the project against additional risk.", "load_pf": "Load portfolios (JSON)", "load_err_pf": "Could not read file.",
    "nom_warn": "Not set by this slider (no ranking possible): {names}. Use \u201cSet individually\u201d if needed.",
    "restrictions": "Restrictions", "restr_on": "Apply restrictions",
    "restr_hint": "Optional. Define portfolio limits; violations are flagged in the results.",
@@ -106,8 +106,8 @@ STR = {
    "load_err": "Modell-Artefakte konnten nicht geladen werden. Bitte zuerst masterskript_final.py lokal ausf\u00fchren.",
    "language": "Sprache", "data_sec": "Daten", "risk_word": "Risiko", "save_pf": "Portfolios herunterladen (JSON)",
    "advice_title": "So l\u00e4sst sich das Risiko senken",
-   "default_tag": "Standardwert", "advice_up": "Gr\u00f6\u00dfte Risikotreiber: {feats} \u2013 eine Verringerung wirkt am st\u00e4rksten.",
-   "advice_down": "Senken das Risiko bereits: {feats} \u2013 eine weitere St\u00e4rkung hilft am meisten.", "load_pf": "Portfolios laden (JSON)", "load_err_pf": "Datei konnte nicht gelesen werden.",
+   "default_tag": "Standardwert", "advice_up": "Am st\u00e4rksten erh\u00f6hen {feats} das Risiko dieses Projekts. Wer hier ansetzt \u2013 etwa durch Verbessern oder Abschw\u00e4chen dieser Merkmale \u2013 senkt das Gesamtrisiko am wirkungsvollsten.",
+   "advice_down": "Bereits risikomindernd wirken {feats}. Diese Merkmale weiter zu st\u00e4rken ist der wirksamste Weg, das Projekt gegen zus\u00e4tzliches Risiko abzusichern.", "load_pf": "Portfolios laden (JSON)", "load_err_pf": "Datei konnte nicht gelesen werden.",
    "nom_warn": "Von diesem Regler nicht gesetzt (keine Rangordnung m\u00f6glich): {names}. Bei Bedarf \u201eEinzeln einstellen\u201c nutzen.",
    "restrictions": "Restriktionen", "restr_on": "Restriktionen anwenden",
    "restr_hint": "Optional. Portfolio-Grenzwerte festlegen; Verletzungen werden in den Ergebnissen markiert.",
@@ -260,10 +260,10 @@ st.markdown(f"""
               text-align:left !important; font-weight:500 !important; border:none !important;
               background:transparent !important; color:{TEXT} !important; padding:0.35rem 0.6rem !important; }}
  section[data-testid="stSidebar"] .stButton > button:hover {{ background:{PANEL_2} !important; }}
- /* aktiver Menue-Eintrag (aktives Portfolio) hervorheben */
- section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]
-   .stButton > button[kind="primary"] {{ background:{PANEL_2} !important; color:{TEXT} !important;
-              font-weight:600 !important; }}
+ /* aktives Portfolio deutlich hervorheben */
+ section[data-testid="stSidebar"] .st-key-side_list .stButton > button[kind="primary"] {{
+              background:{PANEL_2} !important; color:{TEXT} !important; font-weight:700 !important;
+              border-left:3px solid {GREEN} !important; border-radius:6px !important; }}
  /* Sprach-Flaggen: zentriert, kompakt, aktiver Zustand sichtbar */
  section[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton > button {{
               justify-content:center !important; text-align:center !important;
@@ -317,7 +317,7 @@ st.markdown(f"""
  .subtle-btn > button:hover {{ border-color:{HEAD} !important; color:{TEXT} !important; }}
  .subtle-btn > button p {{ color:{MUTED} !important; }}
  /* Kategorie-Koerper (Aggregat vs. einzeln gesetzt) auf gleiche Mindesthoehe */
- .cat-body {{ height:6.4rem; }}
+ .cat-body {{ height:6.7rem; }}
  .eqcard {{ height:16.5rem; display:flex; flex-direction:column; }}
  @keyframes flashrow {{ 0% {{ background:rgba(91,181,107,0.55); }} 100% {{ background:transparent; }} }}
  .proj-row {{ border-radius:6px; padding:0.15rem 0; }}
@@ -412,11 +412,13 @@ with st.sidebar:
     if st.button("\uFF0B\u2002" + T("new_portfolio"), use_container_width=True):
         new_portfolio(); st.rerun()
 
-    with st.container(height=440, border=True, key="side_list"):
+    with st.container(height=560, border=True, key="side_list"):
         if ss.portfolios:
             for pid, pf in list(ss.portfolios.items()):
-                mark = "\u25CF\u2002" if pid == ss.active else "\u25CB\u2002"
-                if st.button(mark + pf["name"], key=f"sel_{pid}", use_container_width=True):
+                is_active = pid == ss.active
+                mark = "\u25CF\u2002" if is_active else "\u25CB\u2002"
+                if st.button(mark + pf["name"], key=f"sel_{pid}", use_container_width=True,
+                             type="primary" if is_active else "secondary"):
                     ss.active = pid; st.rerun()
         else:
             st.caption(T("no_portfolios"))
@@ -884,9 +886,9 @@ def _driver_rows(items, maxabs):
         c = RED if v > 0 else GREEN
         tag = "" if is_set else f"<span style='color:{MUTED}; font-size:0.68rem;'> ({T('default_tag')})</span>"
         rows += (f"<div style='display:flex; align-items:center; gap:0.7rem; height:1.9rem;'>"
-                 f"<div style='width:190px; font-size:0.8rem; color:{TEXT}; white-space:nowrap;"
+                 f"<div style='width:250px; font-size:0.8rem; color:{TEXT}; white-space:nowrap;"
                  f" overflow:hidden; text-overflow:ellipsis;'>{L(feat)}{tag}</div>"
-                 f"<div style='flex:1; background:{PANEL_2}; border-radius:5px; height:9px;'>"
+                 f"<div style='flex:1; max-width:260px; background:{PANEL_2}; border-radius:5px; height:9px;'>"
                  f"<div style='width:{abs(v)/maxabs*100:.0f}%; background:{c}; height:9px; border-radius:5px;'></div></div>"
                  f"<div style='width:52px; text-align:right; color:{c}; font-size:0.78rem; font-weight:600;'>{v:+.2f}</div></div>")
     return rows
