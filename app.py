@@ -67,9 +67,10 @@ STR = {
    "restr_c_rule": "Flag projects with regulatory compliance at High or Critical",
    "restr_c_tip": "Counts projects whose REGULATORY COMPLIANCE feature is set to High or Critical \u2014 not the project's overall risk class. A project can be overall High-risk without high regulatory requirements, and vice versa.",
    "restr_c_label": "Projects with high regulatory requirements",
-   "distribution": "Risk distribution", "restr_check": "Restriction Check", "ok": "OK", "violated": "VIOLATED",
+   "distribution": "Risk distribution", "dist_unit": "projects", "restr_check": "Restriction Check", "ok": "OK", "violated": "VIOLATED",
    "limit": "limit", "actual": "actual", "min_avg": "min avg", "max_avg": "max avg",
    "flagged": "flagged project(s)", "no_restr": "No restrictions active.",
+   "auto_tag": "auto-named",
    "restr_note": "Values not set by you use the dataset's typical value, consistent with the prediction."},
  "de": {"app_title": "IT-Projektportfolio-Risikoanalyse", "configure": "Konfigurieren", "results": "Ergebnisse",
    "portfolios": "Portfolios", "new_portfolio": "Neues Portfolio", "no_portfolios": "Noch keine Portfolios.",
@@ -116,9 +117,10 @@ STR = {
    "restr_c_rule": "Projekte mit regulatorischen Anforderungen auf Hoch/Kritisch markieren",
    "restr_c_tip": "Z\u00e4hlt Projekte, deren MERKMAL \u201eRegulatorische Anforderungen\u201c auf Hoch oder Kritisch steht \u2014 nicht die Gesamt-Risikoklasse. Ein Projekt kann insgesamt High-Risiko sein, ohne hohe regulatorische Anforderungen \u2013 und umgekehrt.",
    "restr_c_label": "Projekte mit hohen regulatorischen Anforderungen",
-   "distribution": "Risikoverteilung", "restr_check": "Restriktionspr\u00fcfung", "ok": "OK", "violated": "VERLETZT",
+   "distribution": "Risikoverteilung", "dist_unit": "Projekte", "restr_check": "Restriktionspr\u00fcfung", "ok": "OK", "violated": "VERLETZT",
    "limit": "Grenzwert", "actual": "Ist", "min_avg": "Min-\u00d8", "max_avg": "Max-\u00d8",
    "flagged": "markierte(s) Projekt(e)", "no_restr": "Keine Restriktionen aktiv.",
+   "auto_tag": "auto-benannt",
    "restr_note": "Nicht gesetzte Werte verwenden den datensatztypischen Wert \u2014 konsistent zur Vorhersage."},
 }
 DE_CAT = {"Complexity": "Komplexit\u00e4t", "Efficiency": "Effizienz", "Risk": "Risiko",
@@ -545,10 +547,23 @@ def _nice(v, kind):
     return round(v * 2) / 2
 
 
+# Feste Basis-Grenzwerte pro Merkmal, UNABHAENGIG von der Projektanzahl.
+# So sind die Anfangswerte beim Einschalten der Restriktionen immer identisch
+# (egal wie viele Projekte eingestellt sind) und lassen sich nur manuell aendern.
+PER_PORTFOLIO_BASE = {
+    "Team_Size": 50.0,                       # max. Personen im gesamten Portfolio
+    "Project_Budget_USD": 5_000_000.0,       # max. Gesamtbudget
+    "External_Dependencies_Count": 25.0,
+    "Stakeholder_Count": 50.0,
+    "Cross_Functional_Dependencies": 25.0,
+}
+
+
 def default_limits(n, sum_feats):
+    # n wird bewusst nicht mehr zur Skalierung genutzt (Signatur bleibt fuer Kompatibilitaet).
     lim = {}
     for f in sum_feats:
-        raw = float(META["defaults"][f]) * max(n, 1) * 1.25
+        raw = PER_PORTFOLIO_BASE.get(f, float(META["defaults"][f]) * 10)
         lim[f] = _nice(raw, SPEC[f].get("kind"))
     lim["Resource_Availability"] = 0.5
     lim["Budget_Utilization_Rate"] = 1.0
@@ -578,8 +593,12 @@ def render_restrictions(pf):
             for i, f in enumerate(r["sum_feats"]):
                 with cols[i % len(cols)]:
                     lo = 1.0 if f == "Team_Size" else 0.0     # >=1 Person bzw. >=0 Euro
+                    # Feld-Obergrenze skaliert weiterhin mit der Projektanzahl (nur die Grenze
+                    # des Eingabefelds, NICHT der Startwert) - so bleibt genug Spielraum.
                     unbounded = f in ("Team_Size", "Project_Budget_USD")
-                    hi = None if unbounded else float(SPEC[f]["max"]) * max(len(pf["projects"]), 1)
+                    hi = None if unbounded else max(
+                        float(SPEC[f]["max"]) * max(len(pf["projects"]), 1),
+                        float(PER_PORTFOLIO_BASE.get(f, 0.0)))
                     cur = float(r["limits"].get(f, base.get(f, lo)))
                     cur = max(cur, lo) if hi is None else min(max(cur, lo), hi)
                     st.markdown(f"<div class='restr-label restr-label-sm'>{L(f)}</div>", unsafe_allow_html=True)
@@ -814,13 +833,16 @@ def render_configure(pf):
                                 f" height:220px; color:{MUTED}; font-size:0.85rem; text-align:center;"
                                 f" padding:0 1rem;'>{T('proj_list_empty')}</div>", unsafe_allow_html=True)
                 for i, proj in enumerate(pf["projects"]):
-                    disp = f"{T('project_default')} {i + 1}" if proj.get("auto") else proj["name"]
+                    is_auto = proj.get("auto")
+                    disp = f"{T('project_default')} {i + 1}" if is_auto else proj["name"]
+                    auto_mark = (f"<span style='color:{MUTED}; font-weight:400; font-size:0.72rem;"
+                                 f" font-style:italic;'>&nbsp;({T('auto_tag')})</span>" if is_auto else "")
                     nset = sum(v is not None for v in proj["params"].values())
                     flash = " flash" if i == flash_i else ""
                     c1, c2 = st.columns([0.85, 0.15], vertical_alignment="center", gap="small")
                     c1.markdown(f"<div class='proj-row{flash}' style='display:flex; align-items:center;"
                                 f" height:2.5rem; border-left:3px solid {HEAD}; padding-left:0.6rem;"
-                                f" border-radius:6px; color:{TEXT}; font-size:0.92rem; font-weight:700;'>{disp}"
+                                f" border-radius:6px; color:{TEXT}; font-size:0.92rem; font-weight:700;'>{disp}{auto_mark}"
                                 f"<span style='color:{MUTED}; font-weight:400; font-size:0.8rem;'>"
                                 f"&nbsp;\u00b7&nbsp;{T('n_feat', n=nset)}</span></div>",
                                 unsafe_allow_html=True)
@@ -965,9 +987,15 @@ def render_project_card(i, proj):
     score = mb.expected_score(order, proba)
     n_set = sum(v is not None for v in proj["params"].values())
     rel_label, rel_col = reliability(n_set)
+    # Positionsbasierter Anzeigename bei Auto-Projekten (konsistent zur Konfig-Liste),
+    # inkl. dezentem (auto)-Tag - so ist klar, dass die Nummer sich beim Loeschen verschiebt.
+    is_auto = proj.get("auto")
+    disp_name = f"{T('project_default')} {i + 1}" if is_auto else proj["name"]
+    auto_mark = (f"<span style='color:{MUTED}; font-weight:400; font-size:0.78rem;"
+                 f" font-style:italic;'>&nbsp;({T('auto_tag')})</span>" if is_auto else "")
     with st.container(border=True):
         head_l, head_r = st.columns([0.72, 0.28], vertical_alignment="center")
-        head_l.markdown(f"<div style='font-size:1.1rem; font-weight:600; color:{TEXT};'>{proj['name']} "
+        head_l.markdown(f"<div style='font-size:1.1rem; font-weight:600; color:{TEXT};'>{disp_name}{auto_mark} "
                         f"<span style='color:{MUTED}; font-weight:400;'>&middot;</span> "
                         f"<span style='color:{color}; font-weight:700;'>{risk_label(pred)}</span></div>"
                         f"<div class='info' style='color:{MUTED}; font-size:0.85rem; margin-top:0.1rem;'>"
@@ -1044,7 +1072,7 @@ def render_results(pf):
     c1, c2 = st.columns(2, gap="small", vertical_alignment="top")
     with c1:
         with st.container(border=True):
-            st.markdown(f"<div class='eqcard'><div class='cat-header'>{T('distribution')} \u00b7 {pm['n']}</div>"
+            st.markdown(f"<div class='eqcard'><div class='cat-header'>{T('distribution')} \u00b7 {pm['n']} {T('dist_unit')}</div>"
                         f"{_dist_chart(per_project)}</div>", unsafe_allow_html=True)
     with c2:
         with st.container(border=True):
