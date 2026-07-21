@@ -833,16 +833,13 @@ def render_configure(pf):
                                 f" height:220px; color:{MUTED}; font-size:0.85rem; text-align:center;"
                                 f" padding:0 1rem;'>{T('proj_list_empty')}</div>", unsafe_allow_html=True)
                 for i, proj in enumerate(pf["projects"]):
-                    is_auto = proj.get("auto")
-                    disp = f"{T('project_default')} {i + 1}" if is_auto else proj["name"]
-                    auto_mark = (f"<span style='color:{MUTED}; font-weight:400; font-size:0.72rem;"
-                                 f" font-style:italic;'>&nbsp;({T('auto_tag')})</span>" if is_auto else "")
+                    disp = f"{T('project_default')} {i + 1}" if proj.get("auto") else proj["name"]
                     nset = sum(v is not None for v in proj["params"].values())
                     flash = " flash" if i == flash_i else ""
                     c1, c2 = st.columns([0.85, 0.15], vertical_alignment="center", gap="small")
                     c1.markdown(f"<div class='proj-row{flash}' style='display:flex; align-items:center;"
                                 f" height:2.5rem; border-left:3px solid {HEAD}; padding-left:0.6rem;"
-                                f" border-radius:6px; color:{TEXT}; font-size:0.92rem; font-weight:700;'>{disp}{auto_mark}"
+                                f" border-radius:6px; color:{TEXT}; font-size:0.92rem; font-weight:700;'>{disp}"
                                 f"<span style='color:{MUTED}; font-weight:400; font-size:0.8rem;'>"
                                 f"&nbsp;\u00b7&nbsp;{T('n_feat', n=nset)}</span></div>",
                                 unsafe_allow_html=True)
@@ -987,15 +984,9 @@ def render_project_card(i, proj):
     score = mb.expected_score(order, proba)
     n_set = sum(v is not None for v in proj["params"].values())
     rel_label, rel_col = reliability(n_set)
-    # Positionsbasierter Anzeigename bei Auto-Projekten (konsistent zur Konfig-Liste),
-    # inkl. dezentem (auto)-Tag - so ist klar, dass die Nummer sich beim Loeschen verschiebt.
-    is_auto = proj.get("auto")
-    disp_name = f"{T('project_default')} {i + 1}" if is_auto else proj["name"]
-    auto_mark = (f"<span style='color:{MUTED}; font-weight:400; font-size:0.78rem;"
-                 f" font-style:italic;'>&nbsp;({T('auto_tag')})</span>" if is_auto else "")
     with st.container(border=True):
         head_l, head_r = st.columns([0.72, 0.28], vertical_alignment="center")
-        head_l.markdown(f"<div style='font-size:1.1rem; font-weight:600; color:{TEXT};'>{disp_name}{auto_mark} "
+        head_l.markdown(f"<div style='font-size:1.1rem; font-weight:600; color:{TEXT};'>{proj['name']} "
                         f"<span style='color:{MUTED}; font-weight:400;'>&middot;</span> "
                         f"<span style='color:{color}; font-weight:700;'>{risk_label(pred)}</span></div>"
                         f"<div class='info' style='color:{MUTED}; font-size:0.85rem; margin-top:0.1rem;'>"
