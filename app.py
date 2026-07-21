@@ -34,7 +34,7 @@ STR = {
    "tile_total": "Overall portfolio risk", "tile_pelev": "Chance of a high-risk project",
    "tile_exphigh": "Expected high-risk projects", "tile_projects": "Projects in portfolio",
    "tile_restr": "Restrictions violated",
-   "added_projects": "Added Projects", "n_feat": "{n} features set", "project_name": "Project Name",
+   "added_projects": "Added Projects", "n_feat": "{n} features set", "proj_list_empty": "Projects you add to this portfolio appear here.", "project_name": "Project Name",
    "min_hint": "Set at least {n} features. The more features you set, the more reliable the prediction.",
    "single": "Details", "fine_tune": "Set individually", "overall": "Overall",
    "apply": "Apply", "cancel": "Cancel", "reset_cat": "Back to overall slider",
@@ -56,7 +56,7 @@ STR = {
    "tip_cnt": "Expected number of projects at High or Critical risk (sum of individual probabilities).",
    "tip_agg": "How much risk this category contributes overall. Each feature in it is set to a matching value (features where a higher value means less risk are mapped inversely).",
    "load_err": "Model artifacts could not be loaded. Please run masterskript_final.py locally first.",
-   "language": "Language", "data_sec": "Data", "risk_word": "risk", "save_pf": "Download portfolios (JSON)",
+   "language": "Language", "data_sec": "Data", "risk_word": "risk", "save_pf": "Download portfolio (JSON)",
    "advice_title": "How to reduce this risk",
    "default_tag": "default", "advice_up": "The characteristics that push this project's risk up the most are {feats}. Improving these \u2013 for example by strengthening them or reducing their severity \u2013 has the strongest effect on lowering the overall risk.",
    "advice_down": "The characteristics that already help keep the risk down are {feats}. Reinforcing these further is the most effective way to protect the project against additional risk.", "load_pf": "Load portfolios (JSON)", "load_err_pf": "Could not read file.",
@@ -83,7 +83,7 @@ STR = {
    "tile_total": "Gesamtrisiko des Portfolios", "tile_pelev": "Wahrscheinlichkeit f\u00fcr ein Hochrisikoprojekt",
    "tile_exphigh": "Erwartete Hochrisikoprojekte", "tile_projects": "Projekte im Portfolio",
    "tile_restr": "Verletzte Restriktionen",
-   "added_projects": "Hinzugef\u00fcgte Projekte", "n_feat": "{n} Merkmale gesetzt", "project_name": "Projektname",
+   "added_projects": "Hinzugef\u00fcgte Projekte", "n_feat": "{n} Merkmale gesetzt", "proj_list_empty": "Projekte, die du diesem Portfolio hinzuf\u00fcgst, erscheinen hier.", "project_name": "Projektname",
    "min_hint": "Mindestens {n} Merkmale angeben. Je mehr Merkmale gesetzt sind, desto zuverl\u00e4ssiger die Vorhersage.",
    "single": "Details", "fine_tune": "Einzeln einstellen", "overall": "Gesamt",
    "apply": "\u00dcbernehmen", "cancel": "Abbrechen", "reset_cat": "Zur\u00fcck zum Gesamt-Regler",
@@ -105,7 +105,7 @@ STR = {
    "tip_cnt": "Erwartete Anzahl Projekte mit High- oder Critical-Risiko (Summe der Einzelwahrscheinlichkeiten).",
    "tip_agg": "Wie viel Risiko diese Kategorie insgesamt beitr\u00e4gt. Jedes Merkmal darin wird auf einen passenden Wert gesetzt (Merkmale, bei denen ein h\u00f6herer Wert weniger Risiko bedeutet, werden gespiegelt abgebildet).",
    "load_err": "Modell-Artefakte konnten nicht geladen werden. Bitte zuerst masterskript_final.py lokal ausf\u00fchren.",
-   "language": "Sprache", "data_sec": "Daten", "risk_word": "Risiko", "save_pf": "Portfolios herunterladen (JSON)",
+   "language": "Sprache", "data_sec": "Daten", "risk_word": "Risiko", "save_pf": "Portfolio herunterladen (JSON)",
    "advice_title": "So l\u00e4sst sich das Risiko senken",
    "default_tag": "Standardwert", "advice_up": "Am st\u00e4rksten erh\u00f6hen {feats} das Risiko dieses Projekts. Wer hier ansetzt \u2013 etwa durch Verbessern oder Abschw\u00e4chen dieser Merkmale \u2013 senkt das Gesamtrisiko am wirkungsvollsten.",
    "advice_down": "Bereits risikomindernd wirken {feats}. Diese Merkmale weiter zu st\u00e4rken ist der wirksamste Weg, das Projekt gegen zus\u00e4tzliches Risiko abzusichern.", "load_pf": "Portfolios laden (JSON)", "load_err_pf": "Datei konnte nicht gelesen werden.",
@@ -806,29 +806,29 @@ def render_configure(pf):
             _pfn = st.text_input(T("pf_name"), value="" if pf.get("auto_name") else pf["name"], placeholder=T("portfolio_default"))
             pf["auto_name"] = not _pfn.strip()
             pf["name"] = _pfn.strip() or T("portfolio_default")
-            if pf["projects"]:
-                st.markdown(f"<div class='param-label'>{T('added_projects')}</div>", unsafe_allow_html=True)
-                flash_i = ss.pop("flash_idx", None)
-                proj_box = st.container(height=260, border=True, key="proj_list") if len(pf["projects"]) > 4 else nullcontext()
-                with proj_box:
-                    for i, proj in enumerate(pf["projects"]):
-                        disp = f"{T('project_default')} {i + 1}" if proj.get("auto") else proj["name"]
-                        nset = sum(v is not None for v in proj["params"].values())
-                        flash = " flash" if i == flash_i else ""
-                        c1, c2 = st.columns([0.85, 0.15], vertical_alignment="center", gap="small")
-                        c1.markdown(f"<div class='proj-row{flash}' style='display:flex; align-items:center;"
-                                    f" height:2.5rem; border-left:3px solid {HEAD}; padding-left:0.6rem;"
-                                    f" border-radius:6px; color:{TEXT}; font-size:0.92rem; font-weight:700;'>{disp}"
-                                    f"<span style='color:{MUTED}; font-weight:400; font-size:0.8rem;'>"
-                                    f"&nbsp;\u00b7&nbsp;{T('n_feat', n=nset)}</span></div>",
-                                    unsafe_allow_html=True)
-                        with c2:
-                            st.markdown("<div class='icon-btn'>", unsafe_allow_html=True)
-                            if st.button("\U0001F5D1\uFE0F", key=f"del_{i}", use_container_width=True):
-                                pf["projects"].pop(i); st.rerun()
-                            st.markdown("</div>", unsafe_allow_html=True)
-            else:
-                st.caption(T("no_projects_yet"))
+            st.markdown(f"<div class='param-label'>{T('added_projects')}</div>", unsafe_allow_html=True)
+            flash_i = ss.pop("flash_idx", None)
+            with st.container(height=260, border=True, key="proj_list"):
+                if not pf["projects"]:
+                    st.markdown(f"<div style='display:flex; align-items:center; justify-content:center;"
+                                f" height:220px; color:{MUTED}; font-size:0.85rem; text-align:center;"
+                                f" padding:0 1rem;'>{T('proj_list_empty')}</div>", unsafe_allow_html=True)
+                for i, proj in enumerate(pf["projects"]):
+                    disp = f"{T('project_default')} {i + 1}" if proj.get("auto") else proj["name"]
+                    nset = sum(v is not None for v in proj["params"].values())
+                    flash = " flash" if i == flash_i else ""
+                    c1, c2 = st.columns([0.85, 0.15], vertical_alignment="center", gap="small")
+                    c1.markdown(f"<div class='proj-row{flash}' style='display:flex; align-items:center;"
+                                f" height:2.5rem; border-left:3px solid {HEAD}; padding-left:0.6rem;"
+                                f" border-radius:6px; color:{TEXT}; font-size:0.92rem; font-weight:700;'>{disp}"
+                                f"<span style='color:{MUTED}; font-weight:400; font-size:0.8rem;'>"
+                                f"&nbsp;\u00b7&nbsp;{T('n_feat', n=nset)}</span></div>",
+                                unsafe_allow_html=True)
+                    with c2:
+                        st.markdown("<div class='icon-btn'>", unsafe_allow_html=True)
+                        if st.button("\U0001F5D1\uFE0F", key=f"del_{i}", use_container_width=True):
+                            pf["projects"].pop(i); st.rerun()
+                        st.markdown("</div>", unsafe_allow_html=True)
             render_restrictions(pf)
 
     # ---------------- Project View (rechts) ----------------
@@ -898,12 +898,12 @@ def _driver_rows(items, maxabs):
     for feat, v, is_set in items:
         c = RED if v > 0 else GREEN
         tag = "" if is_set else f"<span style='color:{MUTED}; font-size:0.68rem;'> ({T('default_tag')})</span>"
-        rows += (f"<div style='display:flex; align-items:center; gap:0.7rem; height:1.9rem;'>"
-                 f"<div style='width:250px; font-size:0.8rem; color:{TEXT}; white-space:nowrap;"
+        rows += (f"<div style='display:flex; align-items:center; gap:0.5rem; height:1.9rem;'>"
+                 f"<div style='flex:1; min-width:0; font-size:0.8rem; color:{TEXT}; white-space:nowrap;"
                  f" overflow:hidden; text-overflow:ellipsis;'>{L(feat)}{tag}</div>"
-                 f"<div style='flex:1; max-width:260px; background:{PANEL_2}; border-radius:5px; height:9px;'>"
+                 f"<div style='width:80px; flex-shrink:0; background:{PANEL_2}; border-radius:5px; height:9px;'>"
                  f"<div style='width:{abs(v)/maxabs*100:.0f}%; background:{c}; height:9px; border-radius:5px;'></div></div>"
-                 f"<div style='width:52px; text-align:right; color:{c}; font-size:0.78rem; font-weight:600;'>{v:+.2f}</div></div>")
+                 f"<div style='width:44px; flex-shrink:0; text-align:right; color:{c}; font-size:0.78rem; font-weight:600;'>{v:+.2f}</div></div>")
     return rows
 
 
@@ -913,11 +913,13 @@ def render_project_details(order, proba, params):
     neg = sorted([d for d in drivers if d[1] < 0], key=lambda x: x[1])[:5]
     maxabs = max([abs(v) for _, v, _ in pos + neg], default=1) or 1
     st.markdown(f"<div class='subtle' style='font-size:0.75rem;'>{T('shap_note')}</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='cat-header' style='color:{RED};'>{T('drivers_up')}</div>", unsafe_allow_html=True)
-    st.markdown(_driver_rows(pos, maxabs) or "<span class='subtle'>\u2014</span>", unsafe_allow_html=True)
-    st.markdown(f"<div class='cat-header' style='color:{GREEN}; margin-top:0.6rem;'>{T('drivers_down')}</div>",
-                unsafe_allow_html=True)
-    st.markdown(_driver_rows(neg, maxabs) or "<span class='subtle'>\u2014</span>", unsafe_allow_html=True)
+    dc1, dc2 = st.columns(2, gap="large")
+    with dc1:
+        st.markdown(f"<div class='cat-header' style='color:{RED};'>{T('drivers_up')}</div>", unsafe_allow_html=True)
+        st.markdown(_driver_rows(pos, maxabs) or "<span class='subtle'>\u2014</span>", unsafe_allow_html=True)
+    with dc2:
+        st.markdown(f"<div class='cat-header' style='color:{GREEN};'>{T('drivers_down')}</div>", unsafe_allow_html=True)
+        st.markdown(_driver_rows(neg, maxabs) or "<span class='subtle'>\u2014</span>", unsafe_allow_html=True)
     st.caption(T("default_expl"))
 
     if pos or neg:
