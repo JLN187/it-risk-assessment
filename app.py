@@ -4,6 +4,7 @@ Nutzt das trainierte Modell (model_pipeline.joblib) ueber model_bridge.py.
 Aufbauend auf: Karrenbauer & Breitner (2022)
 """
 import json
+from contextlib import nullcontext
 import streamlit as st
 import model_bridge as mb
 
@@ -33,7 +34,7 @@ STR = {
    "tile_total": "Overall portfolio risk", "tile_pelev": "Chance of a high-risk project",
    "tile_exphigh": "Expected high-risk projects", "tile_projects": "Projects in portfolio",
    "tile_restr": "Restrictions violated",
-   "added_projects": "Added Projects", "project_name": "Project Name",
+   "added_projects": "Added Projects", "n_feat": "{n} features set", "project_name": "Project Name",
    "min_hint": "Set at least {n} features. The more features you set, the more reliable the prediction.",
    "single": "Details", "fine_tune": "Set individually", "overall": "Overall",
    "apply": "Apply", "cancel": "Cancel", "reset_cat": "Back to overall slider",
@@ -82,7 +83,7 @@ STR = {
    "tile_total": "Gesamtrisiko des Portfolios", "tile_pelev": "Wahrscheinlichkeit f\u00fcr ein Hochrisikoprojekt",
    "tile_exphigh": "Erwartete Hochrisikoprojekte", "tile_projects": "Projekte im Portfolio",
    "tile_restr": "Verletzte Restriktionen",
-   "added_projects": "Hinzugef\u00fcgte Projekte", "project_name": "Projektname",
+   "added_projects": "Hinzugef\u00fcgte Projekte", "n_feat": "{n} Merkmale gesetzt", "project_name": "Projektname",
    "min_hint": "Mindestens {n} Merkmale angeben. Je mehr Merkmale gesetzt sind, desto zuverl\u00e4ssiger die Vorhersage.",
    "single": "Details", "fine_tune": "Einzeln einstellen", "overall": "Gesamt",
    "apply": "\u00dcbernehmen", "cancel": "Abbrechen", "reset_cat": "Zur\u00fcck zum Gesamt-Regler",
@@ -93,7 +94,7 @@ STR = {
    "breakdown": "Projekt-Risiko im Detail", "no_projects": "Noch keine Projekte. F\u00fcge unter Konfigurieren eins hinzu und berechne.",
    "drivers_up": "ERH\u00d6HT RISIKO", "drivers_down": "SENKT RISIKO",
    "shap_note": "SHAP-Beitrag zum Gesamtrisiko (klassen\u00fcbergreifend risikogewichtet).",
-   "default_expl": "Nicht gesetzte Merkmale verwenden den datensatztypischen Wert \u2014 der das Ergebnis trotzdem beeinflusst. Solche Treiber sind mit (Default) markiert.",
+   "default_expl": "Nicht gesetzte Merkmale verwenden den datensatztypischen Wert \u2014 der das Ergebnis trotzdem beeinflusst. Solche Treiber sind mit (Standardwert) markiert.",
    "set_params": "Gesetzte Merkmale", "exp_score": "Erwartungswert-Score", "features_set": "Merkmal(e) gesetzt",
    "custom": "eigener Wert", "levels": "Stufen (links \u2192 rechts): ", "reliability": "Zuverl\u00e4ssigkeit",
    "rel_low": "Gering", "rel_med": "Mittel", "rel_high": "Hoch",
@@ -255,6 +256,8 @@ st.markdown(f"""
               box-shadow:none !important; outline:none !important; padding:0 !important; }}
  .st-key-side_list > div, .st-key-side_list [data-testid="stVerticalBlock"] {{
               border:none !important; background:transparent !important; box-shadow:none !important; }}
+ .st-key-proj_list, .st-key-break_list {{ border:1px solid {BORDER} !important; border-radius:8px !important;
+              background:{BG} !important; }}
  /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
  section[data-testid="stSidebar"] .stButton > button {{ justify-content:flex-start !important;
               text-align:left !important; font-weight:500 !important; border:none !important;
@@ -417,7 +420,7 @@ with st.sidebar:
     if st.button("\uFF0B\u2002" + T("new_portfolio"), use_container_width=True):
         new_portfolio(); st.rerun()
 
-    with st.container(height=720, border=True, key="side_list"):
+    with st.container(height=780, border=True, key="side_list"):
         if ss.portfolios:
             for pid, pf in list(ss.portfolios.items()):
                 is_active = pid == ss.active
@@ -806,19 +809,24 @@ def render_configure(pf):
             if pf["projects"]:
                 st.markdown(f"<div class='param-label'>{T('added_projects')}</div>", unsafe_allow_html=True)
                 flash_i = ss.pop("flash_idx", None)
-                for i, proj in enumerate(pf["projects"]):
-                    disp = f"{T('project_default')} {i + 1}" if proj.get("auto") else proj["name"]
-                    flash = " flash" if i == flash_i else ""
-                    c1, c2 = st.columns([0.85, 0.15], vertical_alignment="center", gap="small")
-                    c1.markdown(f"<div class='proj-row{flash}' style='display:flex; align-items:center;"
-                                f" height:2.5rem; border-left:3px solid {HEAD}; padding-left:0.6rem;"
-                                f" border-radius:6px; color:{TEXT}; font-size:0.92rem; font-weight:700;'>{disp}</div>",
-                                unsafe_allow_html=True)
-                    with c2:
-                        st.markdown("<div class='icon-btn'>", unsafe_allow_html=True)
-                        if st.button("\U0001F5D1\uFE0F", key=f"del_{i}", use_container_width=True):
-                            pf["projects"].pop(i); st.rerun()
-                        st.markdown("</div>", unsafe_allow_html=True)
+                proj_box = st.container(height=260, border=True, key="proj_list") if len(pf["projects"]) > 4 else nullcontext()
+                with proj_box:
+                    for i, proj in enumerate(pf["projects"]):
+                        disp = f"{T('project_default')} {i + 1}" if proj.get("auto") else proj["name"]
+                        nset = sum(v is not None for v in proj["params"].values())
+                        flash = " flash" if i == flash_i else ""
+                        c1, c2 = st.columns([0.85, 0.15], vertical_alignment="center", gap="small")
+                        c1.markdown(f"<div class='proj-row{flash}' style='display:flex; align-items:center;"
+                                    f" height:2.5rem; border-left:3px solid {HEAD}; padding-left:0.6rem;"
+                                    f" border-radius:6px; color:{TEXT}; font-size:0.92rem; font-weight:700;'>{disp}"
+                                    f"<span style='color:{MUTED}; font-weight:400; font-size:0.8rem;'>"
+                                    f"&nbsp;\u00b7&nbsp;{T('n_feat', n=nset)}</span></div>",
+                                    unsafe_allow_html=True)
+                        with c2:
+                            st.markdown("<div class='icon-btn'>", unsafe_allow_html=True)
+                            if st.button("\U0001F5D1\uFE0F", key=f"del_{i}", use_container_width=True):
+                                pf["projects"].pop(i); st.rerun()
+                            st.markdown("</div>", unsafe_allow_html=True)
             else:
                 st.caption(T("no_projects_yet"))
             render_restrictions(pf)
@@ -1056,20 +1064,23 @@ def render_results(pf):
             body += "</div>"
             st.markdown(body, unsafe_allow_html=True)
 
-    # ---- Zeile 3: Projektkarten (2 Spalten) ----
+    # ---- Zeile 3: Projektkarten (2 Spalten, ab 6 Projekten scrollbar) ----
     st.markdown(f"### {T('breakdown')}")
     projs = list(enumerate(pf["projects"]))
-    for rs in range(0, len(projs), 2):
-        cols = st.columns(2, gap="small")
-        for col, (i, proj) in zip(cols, projs[rs:rs + 2]):
-            with col:
-                render_project_card(i, proj)
+    break_box = st.container(height=680, border=True, key="break_list") if len(projs) > 6 else nullcontext()
+    with break_box:
+        for rs in range(0, len(projs), 2):
+            cols = st.columns(2, gap="small")
+            for col, (i, proj) in zip(cols, projs[rs:rs + 2]):
+                with col:
+                    render_project_card(i, proj)
 
     st.markdown("<div style='height:1.2rem;'></div>", unsafe_allow_html=True)
     _, sc, _ = st.columns([0.32, 0.36, 0.32])
+    _safe = "".join(c if c.isalnum() else "_" for c in pf["name"]) or "portfolio"
     sc.download_button(T("save_pf"),
-                       data=json.dumps({"portfolios": ss.portfolios}, indent=2, ensure_ascii=False),
-                       file_name="portfolios.json", mime="application/json",
+                       data=json.dumps({"portfolios": {ss.active: pf}}, indent=2, ensure_ascii=False),
+                       file_name=f"{_safe}.json", mime="application/json",
                        use_container_width=True)
 
 
