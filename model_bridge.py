@@ -214,6 +214,21 @@ def compute_directions(df, risk_rank):
 # ---------------------------------------------------------------------------
 # Laden der Artefakte
 # ---------------------------------------------------------------------------
+def _sync_schema(meta):
+    """Übernimmt die im Training festgelegten Rangordnungen aus den Metadaten.
+    Dadurch bleibt das Masterskript die maßgebliche Quelle des Merkmalsschemas
+    und Abweichungen zwischen Training und Oberfläche sind ausgeschlossen.
+    Ältere Metadateien ohne diese Angaben nutzen weiterhin die oben
+    hinterlegten Definitionen."""
+    global ORDINAL_ORDERS, MATURITY_ORDER, NOMINAL_COLS
+    maps = meta.get("ordinal_maps")
+    if not maps:
+        return
+    MATURITY_ORDER = list(maps[MATURITY_COLS[0]])
+    ORDINAL_ORDERS = {k: list(v) for k, v in maps.items() if k not in MATURITY_COLS}
+    NOMINAL_COLS = list(meta.get("nominal_cols", NOMINAL_COLS))
+
+
 def load_all(model_path="model_pipeline.joblib",
              meta_path="feature_defaults.joblib",
              csv_path="project_risk_raw_dataset.csv"):
@@ -221,6 +236,7 @@ def load_all(model_path="model_pipeline.joblib",
     Stufengrenzen und Risikorichtungen abzuleiten, nicht für die Vorhersage."""
     model = joblib.load(model_path)
     meta = joblib.load(meta_path)
+    _sync_schema(meta)
     # keep_default_na=False: der Kategoriewert "None" muss erhalten bleiben
     raw = pd.read_csv(csv_path, keep_default_na=False, na_filter=False)
     raw = raw[raw["Project_Type"] == "IT"]
