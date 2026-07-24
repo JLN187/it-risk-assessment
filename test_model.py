@@ -1,17 +1,17 @@
-"""Smoke-Test: laedt das exportierte Modell und macht eine Beispielvorhersage."""
-import pandas as pd
+"""Funktionsprüfung: lädt das exportierte Modell und erzeugt eine Beispielvorhersage."""
 import joblib
+import pandas as pd
 
 model = joblib.load("model_pipeline.joblib")
 meta = joblib.load("feature_defaults.joblib")
 
-# Rohdaten laden und exakt wie im Training vorbereiten
-df = pd.read_csv("project_risk_raw_dataset.csv")
-df = df[df["Project_Type"] == "IT"].drop(columns=["Project_ID", "Project_Type", "Risk_Level"])
-for c in meta["maturity_cols"]:                       # Missing-Indikatoren ergaenzen
-    df[c + "_missing"] = df[c].isna().astype(int)
+# keep_default_na=False: der Kategoriewert "None" bezeichnet die unterste
+# Reifestufe und muss als Zeichenkette erhalten bleiben.
+df = pd.read_csv("project_risk_raw_dataset.csv", keep_default_na=False, na_filter=False)
+df = df[df["Project_Type"] == "IT"]
+df = df[meta["all_features"]]        # Spaltenauswahl und -reihenfolge wie im Training
 
-row = df.iloc[[0]]                                     # ein Beispielprojekt
+row = df.iloc[[0]]
 proba = model.predict_proba(row)[0]
 order = meta["target_order"]
 pred = order[proba.argmax()]
