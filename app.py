@@ -70,7 +70,6 @@ STR = {
    "distribution": "Risk distribution", "dist_unit": "projects", "restr_check": "Restriction Check", "ok": "OK", "violated": "VIOLATED",
    "limit": "limit", "actual": "actual", "min_avg": "min avg", "max_avg": "max avg",
    "flagged": "flagged project(s)", "no_restr": "No restrictions active.",
-   "auto_tag": "auto-named",
    "restr_note": "Values not set by you use the dataset's typical value, consistent with the prediction."},
  "de": {"app_title": "IT-Projektportfolio-Risikoanalyse", "configure": "Konfigurieren", "results": "Ergebnisse",
    "portfolios": "Portfolios", "new_portfolio": "Neues Portfolio", "no_portfolios": "Noch keine Portfolios.",
@@ -120,7 +119,6 @@ STR = {
    "distribution": "Risikoverteilung", "dist_unit": "Projekte", "restr_check": "Restriktionspr\u00fcfung", "ok": "OK", "violated": "VERLETZT",
    "limit": "Grenzwert", "actual": "Ist", "min_avg": "Min-\u00d8", "max_avg": "Max-\u00d8",
    "flagged": "markierte(s) Projekt(e)", "no_restr": "Keine Restriktionen aktiv.",
-   "auto_tag": "auto-benannt",
    "restr_note": "Nicht gesetzte Werte verwenden den datensatztypischen Wert \u2014 konsistent zur Vorhersage."},
 }
 DE_CAT = {"Complexity": "Komplexit\u00e4t", "Efficiency": "Effizienz", "Risk": "Risiko",
@@ -260,11 +258,25 @@ st.markdown(f"""
               border:none !important; background:transparent !important; box-shadow:none !important; }}
  .st-key-proj_list, .st-key-break_list {{ border:1px solid {BORDER} !important; border-radius:8px !important;
               background:{BG} !important; }}
- /* Sidebar-Buttons linksbuendig mit Icon (Claude-Stil) */
+ /* Seitenleisten-Buttons: linksbündig mit vorangestelltem Symbol */
  section[data-testid="stSidebar"] .stButton > button {{ justify-content:flex-start !important;
               text-align:left !important; font-weight:500 !important; border:none !important;
               background:transparent !important; color:{TEXT} !important; padding:0.35rem 0.6rem !important; }}
  section[data-testid="stSidebar"] .stButton > button:hover {{ background:{PANEL_2} !important; }}
+ /* Primäre Aktion der Seitenleiste: gefüllte Fläche, die sich klar von den
+    Portfolioeinträgen darunter abhebt */
+ section[data-testid="stSidebar"] .st-key-new_pf .stButton > button {{
+              background:{HEAD} !important; color:{BG} !important;
+              border:1px solid {HEAD} !important; border-radius:8px !important;
+              justify-content:center !important; text-align:center !important;
+              font-weight:700 !important; letter-spacing:0.02em !important;
+              padding:0.55rem 0.6rem !important; margin-bottom:0.5rem !important; }}
+ section[data-testid="stSidebar"] .st-key-new_pf .stButton > button:hover {{
+              background:{TEXT} !important; border-color:{TEXT} !important;
+              color:{BG} !important; }}
+ section[data-testid="stSidebar"] .st-key-new_pf .stButton > button p,
+ section[data-testid="stSidebar"] .st-key-new_pf .stButton > button div {{
+              color:{BG} !important; font-weight:700 !important; }}
  /* aktives Portfolio deutlich hervorheben */
  section[data-testid="stSidebar"] .st-key-side_list .stButton > button[kind="primary"] {{
               background:{PANEL_2} !important; color:{TEXT} !important; font-weight:700 !important;
@@ -336,14 +348,14 @@ st.markdown(f"""
  [data-testid="stFileUploaderDropzone"] > div {{ display:flex; flex-direction:column; align-items:center; }}
  [data-testid="stFileUploaderDropzoneInstructions"] {{ align-items:center; text-align:center; }}
  [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlockBorderWrapper"] {{ background:{BG}; }}
- /* aktiver Nav-/Sprach-Button: dunkles Highlight mit HELLEM Text (klarer Kontrast) */
+ /* Aktiver Navigations- oder Sprachbutton: heller Text auf dunkler Fläche */
  .stButton > button[kind="primary"] {{ background:{PANEL_2} !important; color:{TEXT} !important; border:1px solid {HEAD} !important; box-shadow:none !important; outline:none !important; }}
  .stButton > button[kind="primary"]:focus, .stButton > button[kind="primary"]:active, .stButton > button[kind="primary"]:focus-visible {{ box-shadow:none !important; outline:none !important; }}
  .stButton > button[kind="primary"] p, .stButton > button[kind="primary"] div {{ color:{TEXT} !important; }}
  div[data-baseweb="slider"] div[role="slider"] {{ background:{HEAD} !important; border:2px solid {TEXT} !important; box-shadow:0 0 0 4px rgba(216,213,205,0.20) !important; }}
  [data-testid="stThumbValue"] {{ color:{TEXT} !important; font-weight:700 !important;
      background:{PANEL_2} !important; padding:0 5px; border-radius:4px; }}
- /* Streamlits eigene Min/Max-Beschriftung ausblenden - wir zeichnen eigene Ticks */
+ /* Standardbeschriftung des Reglers ausblenden; die Stufen werden selbst gezeichnet */
  [data-testid="stSliderTickBar"], [data-testid="stTickBar"] {{ display:none !important; }}
  [data-testid="stSliderTickBarMin"], [data-testid="stSliderTickBarMax"] {{ display:none !important; }}
 </style>
@@ -419,7 +431,7 @@ with st.sidebar:
         unsafe_allow_html=True)
 
     st.markdown(f"<div class='side-sec'>{T('portfolios')}</div>", unsafe_allow_html=True)
-    if st.button("\uFF0B\u2002" + T("new_portfolio"), use_container_width=True):
+    if st.button("\uFF0B\u2002" + T("new_portfolio"), key="new_pf", use_container_width=True):
         new_portfolio(); st.rerun()
 
     with st.container(height=780, border=True, key="side_list"):
@@ -547,12 +559,11 @@ def _nice(v, kind):
     return round(v * 2) / 2
 
 
-# Feste Basis-Grenzwerte pro Merkmal, UNABHAENGIG von der Projektanzahl.
-# So sind die Anfangswerte beim Einschalten der Restriktionen immer identisch
-# (egal wie viele Projekte eingestellt sind) und lassen sich nur manuell aendern.
+# Grenzwerte je Merkmal auf Portfolioebene. Sie sind von der Anzahl der Projekte
+# unabhängig und dienen als Ausgangspunkt, den der Nutzer anpasst.
 PER_PORTFOLIO_BASE = {
-    "Team_Size": 50.0,                       # max. Personen im gesamten Portfolio
-    "Project_Budget_USD": 5_000_000.0,       # max. Gesamtbudget
+    "Team_Size": 50.0,                       # Personen im gesamten Portfolio
+    "Project_Budget_USD": 5_000_000.0,       # Gesamtbudget des Portfolios
     "External_Dependencies_Count": 25.0,
     "Stakeholder_Count": 50.0,
     "Cross_Functional_Dependencies": 25.0,
@@ -560,7 +571,8 @@ PER_PORTFOLIO_BASE = {
 
 
 def default_limits(n, sum_feats):
-    # n wird bewusst nicht mehr zur Skalierung genutzt (Signatur bleibt fuer Kompatibilitaet).
+    """Startwerte der Portfoliogrenzen. Die Anzahl der Projekte fließt nicht in
+    die Skalierung ein, damit die Vorgaben reproduzierbar bleiben."""
     lim = {}
     for f in sum_feats:
         raw = PER_PORTFOLIO_BASE.get(f, float(META["defaults"][f]) * 10)
@@ -593,8 +605,8 @@ def render_restrictions(pf):
             for i, f in enumerate(r["sum_feats"]):
                 with cols[i % len(cols)]:
                     lo = 1.0 if f == "Team_Size" else 0.0     # >=1 Person bzw. >=0 Euro
-                    # Feld-Obergrenze skaliert weiterhin mit der Projektanzahl (nur die Grenze
-                    # des Eingabefelds, NICHT der Startwert) - so bleibt genug Spielraum.
+                    # Die Obergrenze des Eingabefelds wächst mit der Anzahl der
+                    # Projekte, damit auch große Portfolios abbildbar bleiben.
                     unbounded = f in ("Team_Size", "Project_Budget_USD")
                     hi = None if unbounded else max(
                         float(SPEC[f]["max"]) * max(len(pf["projects"]), 1),
