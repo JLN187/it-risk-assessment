@@ -1,64 +1,25 @@
 """
 IT Portfolio Risk Assessment - Streamlit-Prototyp
-
-Oberflaeche zur Risikobewertung einzelner IT-Projekte und ganzer Portfolios.
-Die Vorhersage liefert das trainierte Modell ueber model_bridge.py.
-Fachliche Grundlage: Karrenbauer & Breitner (2022).
+Nutzt das trainierte Modell (model_pipeline.joblib) ueber model_bridge.py.
+Aufbauend auf: Karrenbauer & Breitner (2022)
 """
 import json
 from contextlib import nullcontext
-
 import streamlit as st
-
 import model_bridge as mb
 
-st.set_page_config(page_title="IT Project Portfolio Risk Analyzer",
-                   layout="wide", initial_sidebar_state="expanded")
-
-ss = st.session_state
-ss.setdefault("lang", "en")
-ss.setdefault("theme", "dark")
-ss.setdefault("portfolios", {})
-ss.setdefault("active", None)
-ss.setdefault("view", "Configure")
-ss.setdefault("draft_id", 0)
-ss.setdefault("pf_counter", 0)
-MIN_FEATURES = 1
-
 # --------------------------------------------------------------------------------------
-# Farbpaletten
+# Palette
 # --------------------------------------------------------------------------------------
-# Beide Ansichten teilen denselben warmen Grundton. In der hellen Variante sind
-# die Signalfarben abgedunkelt, damit sie auf hellem Grund ausreichend Kontrast
-# behalten.
-THEMES = {
-    "dark": {
-        "BG": "#262624", "PANEL": "#31312e", "PANEL_2": "#3c3c38", "BORDER": "#55554f",
-        "TEXT": "#f2f0ea", "MUTED": "#b3b0a8", "HEAD": "#d8d5cd",
-        "GREEN": "#5bb56b", "RED": "#e0574f", "AMBER": "#d9a441", "ORANGE": "#e5844d",
-        "FLASH": "rgba(91,181,107,0.55)", "GLOW": "rgba(216,213,205,0.20)",
-        "ON_ACCENT": "#262624",
-    },
-    "light": {
-        "BG": "#f6f5f0", "PANEL": "#ffffff", "PANEL_2": "#ecebe4", "BORDER": "#d4d1c7",
-        "TEXT": "#2b2a26", "MUTED": "#6d6a62", "HEAD": "#57544c",
-        "GREEN": "#3d8a4f", "RED": "#c0433b", "AMBER": "#a37714", "ORANGE": "#c06722",
-        "FLASH": "rgba(61,138,79,0.28)", "GLOW": "rgba(87,84,76,0.18)",
-        "ON_ACCENT": "#ffffff",
-    },
-}
-P = THEMES[ss.theme]
-BG, PANEL, PANEL_2, BORDER = P["BG"], P["PANEL"], P["PANEL_2"], P["BORDER"]
-TEXT, MUTED, HEAD = P["TEXT"], P["MUTED"], P["HEAD"]
-GREEN, RED, AMBER, ORANGE = P["GREEN"], P["RED"], P["AMBER"], P["ORANGE"]
-FLASH, GLOW, ON_ACCENT = P["FLASH"], P["GLOW"], P["ON_ACCENT"]
-
-LEVEL_COLORS = {"Low": GREEN, "Medium": AMBER, "High": ORANGE, "Critical": RED, "N/A": MUTED}
+BG, PANEL, PANEL_2, BORDER = "#262624", "#31312e", "#3c3c38", "#55554f"
+TEXT, MUTED, HEAD = "#f2f0ea", "#b3b0a8", "#d8d5cd"
+GREEN, RED = "#5bb56b", "#e0574f"
+LEVEL_COLORS = {"Low": GREEN, "Medium": "#d9a441", "High": "#e5844d", "Critical": RED, "N/A": MUTED}
 AGG_EN = ["N/A", "Low", "Medium", "High", "Very High"]
 CAT_DIR = {"Complexity": +1, "Efficiency": -1, "Risk": +1, "Strategy": -1, "Urgency": +1}
 
 # --------------------------------------------------------------------------------------
-# Oberflaechentexte
+# i18n
 # --------------------------------------------------------------------------------------
 STR = {
  "en": {"app_title": "IT Project Portfolio Risk Analyzer", "configure": "Configure", "results": "Results",
@@ -73,17 +34,13 @@ STR = {
    "tile_total": "Overall portfolio risk", "tile_pelev": "Chance of a high-risk project",
    "tile_exphigh": "Expected high-risk projects", "tile_projects": "Projects in portfolio",
    "tile_restr": "Restrictions violated",
-   "added_projects": "Added Projects", "n_feat": "{n} features set",
-   "proj_list_empty": "Projects you add to this portfolio appear here.", "project_name": "Project Name",
+   "added_projects": "Added Projects", "n_feat": "{n} features set", "proj_list_empty": "Projects you add to this portfolio appear here.", "project_name": "Project Name",
    "min_hint": "Set at least {n} features. The more features you set, the more reliable the prediction.",
    "single": "Details", "fine_tune": "Set individually", "overall": "Overall",
    "apply": "Apply", "cancel": "Cancel", "reset_cat": "Back to overall slider",
-   "n_individual": "{n} of {t} features set individually", "add_project": "Add Project",
-   "calc": "Calculate Results",
-   "warn_min": "Please set at least {n} features (currently {c}).",
-   "warn_add": "Please add at least one project first.",
-   "risk_results": "Risk Assessment Results", "pf_summary": "Portfolio Risk Summary",
-   "total_risk": "Total Portfolio Risk",
+   "n_individual": "{n} of {t} features set individually", "add_project": "Add Project", "calc": "Calculate Results",
+   "warn_min": "Please set at least {n} features (currently {c}).", "warn_add": "Please add at least one project first.",
+   "risk_results": "Risk Assessment Results", "pf_summary": "Portfolio Risk Summary", "total_risk": "Total Portfolio Risk",
    "p_elev": "P(\u22651 elevated-risk project)", "exp_high": "Expected # \u2265 High", "projects": "Projects",
    "breakdown": "Project Risk Breakdown", "no_projects": "No projects yet. Add one in Configure and calculate.",
    "drivers_up": "INCREASES RISK", "drivers_down": "DECREASES RISK",
@@ -98,23 +55,19 @@ STR = {
    "tip_elev": "Probability that at least one project is High or Critical risk. Assumes projects are independent (probability-tree path).",
    "tip_cnt": "Expected number of projects at High or Critical risk (sum of individual probabilities).",
    "tip_agg": "How much risk this category contributes overall. Each feature in it is set to a matching value (features where a higher value means less risk are mapped inversely).",
-   "load_err": "Model artifacts could not be loaded. Please run the master script locally first.",
-   "language": "Language", "appearance": "Appearance", "theme_light": "Light", "theme_dark": "Dark",
-   "data_sec": "Data", "risk_word": "risk", "save_pf": "Download portfolio (JSON)",
-   "advice_title": "How to reduce this risk", "default_tag": "default",
-   "advice_up": "The characteristics that push this project's risk up the most are {feats}. Improving these \u2013 for example by strengthening them or reducing their severity \u2013 has the strongest effect on lowering the overall risk.",
-   "advice_down": "The characteristics that already help keep the risk down are {feats}. Reinforcing these further is the most effective way to protect the project against additional risk.",
-   "load_pf": "Load portfolios (JSON)", "load_err_pf": "Could not read file.",
+   "load_err": "Model artifacts could not be loaded. Please run masterskript_final.py locally first.",
+   "language": "Language", "data_sec": "Data", "risk_word": "risk", "save_pf": "Download portfolio (JSON)",
+   "advice_title": "How to reduce this risk",
+   "default_tag": "default", "advice_up": "The characteristics that push this project's risk up the most are {feats}. Improving these \u2013 for example by strengthening them or reducing their severity \u2013 has the strongest effect on lowering the overall risk.",
+   "advice_down": "The characteristics that already help keep the risk down are {feats}. Reinforcing these further is the most effective way to protect the project against additional risk.", "load_pf": "Load portfolios (JSON)", "load_err_pf": "Could not read file.",
    "nom_warn": "Not set by this slider (no ranking possible): {names}. Use \u201cSet individually\u201d if needed.",
    "restrictions": "Restrictions", "restr_on": "Apply restrictions",
    "restr_hint": "Optional. Define portfolio limits; violations are flagged in the results.",
-   "restr_a_pick": "Which totals to limit", "restr_a": "Portfolio totals (max)",
-   "restr_b": "Portfolio averages", "restr_c": "Per-project rule",
+   "restr_a_pick": "Which totals to limit", "restr_a": "Portfolio totals (max)", "restr_b": "Portfolio averages", "restr_c": "Per-project rule",
    "restr_c_rule": "Flag projects with regulatory compliance at High or Critical",
    "restr_c_tip": "Counts projects whose REGULATORY COMPLIANCE feature is set to High or Critical \u2014 not the project's overall risk class. A project can be overall High-risk without high regulatory requirements, and vice versa.",
    "restr_c_label": "Projects with high regulatory requirements",
-   "distribution": "Risk distribution", "dist_unit": "projects", "restr_check": "Restriction Check",
-   "ok": "OK", "violated": "VIOLATED",
+   "distribution": "Risk distribution", "dist_unit": "projects", "restr_check": "Restriction Check", "ok": "OK", "violated": "VIOLATED",
    "limit": "limit", "actual": "actual", "min_avg": "min avg", "max_avg": "max avg",
    "flagged": "flagged project(s)", "no_restr": "No restrictions active.",
    "restr_note": "Values not set by you use the dataset's typical value, consistent with the prediction."},
@@ -122,30 +75,23 @@ STR = {
    "portfolios": "Portfolios", "new_portfolio": "Neues Portfolio", "no_portfolios": "Noch keine Portfolios.",
    "no_pf_sel": "Kein Portfolio ausgew\u00e4hlt", "create_pf": "Erstelle ein Portfolio, um zu starten",
    "create_btn": "Neues Portfolio erstellen", "pf_config": "Portfolio-Konfiguration", "pf_name": "Portfolioname",
-   "portfolio_view": "Portfolio", "project_view": "Neues Projekt",
-   "no_projects_yet": "Noch keine Projekte hinzugef\u00fcgt.",
+   "portfolio_view": "Portfolio", "project_view": "Neues Projekt", "no_projects_yet": "Noch keine Projekte hinzugef\u00fcgt.",
    "project_default": "Projekt", "portfolio_default": "Portfolio", "choose": "Bitte ausw\u00e4hlen",
    "more_hint": "Je mehr Merkmale gesetzt sind, desto zuverl\u00e4ssiger die Vorhersage.",
-   "warn_one": "Bitte mindestens ein Merkmal setzen.", "toast_added": "Projekt hinzugef\u00fcgt",
+   "warn_one": "Bitte mindestens ein Merkmal setzen.", "toast_added": "Projekt hinzugefügt",
    "not_calc": "Noch keine Ergebnisse. Portfolio konfigurieren und \u201eErgebnisse berechnen\u201c dr\u00fccken.",
    "tile_total": "Gesamtrisiko des Portfolios", "tile_pelev": "Wahrscheinlichkeit f\u00fcr ein Hochrisikoprojekt",
    "tile_exphigh": "Erwartete Hochrisikoprojekte", "tile_projects": "Projekte im Portfolio",
    "tile_restr": "Verletzte Restriktionen",
-   "added_projects": "Hinzugef\u00fcgte Projekte", "n_feat": "{n} Merkmale gesetzt",
-   "proj_list_empty": "Projekte, die du diesem Portfolio hinzuf\u00fcgst, erscheinen hier.",
-   "project_name": "Projektname",
+   "added_projects": "Hinzugef\u00fcgte Projekte", "n_feat": "{n} Merkmale gesetzt", "proj_list_empty": "Projekte, die du diesem Portfolio hinzuf\u00fcgst, erscheinen hier.", "project_name": "Projektname",
    "min_hint": "Mindestens {n} Merkmale angeben. Je mehr Merkmale gesetzt sind, desto zuverl\u00e4ssiger die Vorhersage.",
    "single": "Details", "fine_tune": "Einzeln einstellen", "overall": "Gesamt",
    "apply": "\u00dcbernehmen", "cancel": "Abbrechen", "reset_cat": "Zur\u00fcck zum Gesamt-Regler",
-   "n_individual": "{n} von {t} Merkmalen einzeln gesetzt", "add_project": "Projekt hinzuf\u00fcgen",
-   "calc": "Ergebnisse berechnen",
-   "warn_min": "Bitte mindestens {n} Merkmale setzen (aktuell {c}).",
-   "warn_add": "Bitte zuerst mindestens ein Projekt hinzuf\u00fcgen.",
-   "risk_results": "Risikobewertung", "pf_summary": "Portfolio-Risiko\u00fcbersicht",
-   "total_risk": "Gesamt-Portfoliorisiko",
+   "n_individual": "{n} von {t} Merkmalen einzeln gesetzt", "add_project": "Projekt hinzuf\u00fcgen", "calc": "Ergebnisse berechnen",
+   "warn_min": "Bitte mindestens {n} Merkmale setzen (aktuell {c}).", "warn_add": "Bitte zuerst mindestens ein Projekt hinzuf\u00fcgen.",
+   "risk_results": "Risikobewertung", "pf_summary": "Portfolio-Risiko\u00fcbersicht", "total_risk": "Gesamt-Portfoliorisiko",
    "p_elev": "P(\u22651 Hochrisikoprojekt)", "exp_high": "Erwartete Anzahl \u2265 High", "projects": "Projekte",
-   "breakdown": "Projekt-Risiko im Detail",
-   "no_projects": "Noch keine Projekte. F\u00fcge unter Konfigurieren eins hinzu und berechne.",
+   "breakdown": "Projekt-Risiko im Detail", "no_projects": "Noch keine Projekte. F\u00fcge unter Konfigurieren eins hinzu und berechne.",
    "drivers_up": "ERH\u00d6HT RISIKO", "drivers_down": "SENKT RISIKO",
    "shap_note": "SHAP-Beitrag zum Gesamtrisiko (klassen\u00fcbergreifend risikogewichtet).",
    "default_expl": "Nicht gesetzte Merkmale verwenden den datensatztypischen Wert \u2014 der das Ergebnis trotzdem beeinflusst. Solche Treiber sind mit (Standardwert) markiert.",
@@ -158,23 +104,19 @@ STR = {
    "tip_elev": "Wahrscheinlichkeit, dass mindestens ein Projekt High- oder Critical-Risiko hat. Annahme: Projekte unabh\u00e4ngig (Baumdiagramm-Pfad).",
    "tip_cnt": "Erwartete Anzahl Projekte mit High- oder Critical-Risiko (Summe der Einzelwahrscheinlichkeiten).",
    "tip_agg": "Wie viel Risiko diese Kategorie insgesamt beitr\u00e4gt. Jedes Merkmal darin wird auf einen passenden Wert gesetzt (Merkmale, bei denen ein h\u00f6herer Wert weniger Risiko bedeutet, werden gespiegelt abgebildet).",
-   "load_err": "Modell-Artefakte konnten nicht geladen werden. Bitte zuerst das Masterskript lokal ausf\u00fchren.",
-   "language": "Sprache", "appearance": "Darstellung", "theme_light": "Hell", "theme_dark": "Dunkel",
-   "data_sec": "Daten", "risk_word": "Risiko", "save_pf": "Portfolio herunterladen (JSON)",
-   "advice_title": "So l\u00e4sst sich das Risiko senken", "default_tag": "Standardwert",
-   "advice_up": "Am st\u00e4rksten erh\u00f6hen {feats} das Risiko dieses Projekts. Wer hier ansetzt \u2013 etwa durch Verbessern oder Abschw\u00e4chen dieser Merkmale \u2013 senkt das Gesamtrisiko am wirkungsvollsten.",
-   "advice_down": "Bereits risikomindernd wirken {feats}. Diese Merkmale weiter zu st\u00e4rken ist der wirksamste Weg, das Projekt gegen zus\u00e4tzliches Risiko abzusichern.",
-   "load_pf": "Portfolios laden (JSON)", "load_err_pf": "Datei konnte nicht gelesen werden.",
+   "load_err": "Modell-Artefakte konnten nicht geladen werden. Bitte zuerst masterskript_final.py lokal ausf\u00fchren.",
+   "language": "Sprache", "data_sec": "Daten", "risk_word": "Risiko", "save_pf": "Portfolio herunterladen (JSON)",
+   "advice_title": "So l\u00e4sst sich das Risiko senken",
+   "default_tag": "Standardwert", "advice_up": "Am st\u00e4rksten erh\u00f6hen {feats} das Risiko dieses Projekts. Wer hier ansetzt \u2013 etwa durch Verbessern oder Abschw\u00e4chen dieser Merkmale \u2013 senkt das Gesamtrisiko am wirkungsvollsten.",
+   "advice_down": "Bereits risikomindernd wirken {feats}. Diese Merkmale weiter zu st\u00e4rken ist der wirksamste Weg, das Projekt gegen zus\u00e4tzliches Risiko abzusichern.", "load_pf": "Portfolios laden (JSON)", "load_err_pf": "Datei konnte nicht gelesen werden.",
    "nom_warn": "Von diesem Regler nicht gesetzt (keine Rangordnung m\u00f6glich): {names}. Bei Bedarf \u201eEinzeln einstellen\u201c nutzen.",
    "restrictions": "Restriktionen", "restr_on": "Restriktionen anwenden",
    "restr_hint": "Optional. Portfolio-Grenzwerte festlegen; Verletzungen werden in den Ergebnissen markiert.",
-   "restr_a_pick": "Welche Summen begrenzen", "restr_a": "Portfoliosummen (max)",
-   "restr_b": "Portfoliodurchschnitte", "restr_c": "Einzelprojekt-Regel",
+   "restr_a_pick": "Welche Summen begrenzen", "restr_a": "Portfoliosummen (max)", "restr_b": "Portfoliodurchschnitte", "restr_c": "Einzelprojekt-Regel",
    "restr_c_rule": "Projekte mit regulatorischen Anforderungen auf Hoch/Kritisch markieren",
    "restr_c_tip": "Z\u00e4hlt Projekte, deren MERKMAL \u201eRegulatorische Anforderungen\u201c auf Hoch oder Kritisch steht \u2014 nicht die Gesamt-Risikoklasse. Ein Projekt kann insgesamt High-Risiko sein, ohne hohe regulatorische Anforderungen \u2013 und umgekehrt.",
    "restr_c_label": "Projekte mit hohen regulatorischen Anforderungen",
-   "distribution": "Risikoverteilung", "dist_unit": "Projekte", "restr_check": "Restriktionspr\u00fcfung",
-   "ok": "OK", "violated": "VERLETZT",
+   "distribution": "Risikoverteilung", "dist_unit": "Projekte", "restr_check": "Restriktionspr\u00fcfung", "ok": "OK", "violated": "VERLETZT",
    "limit": "Grenzwert", "actual": "Ist", "min_avg": "Min-\u00d8", "max_avg": "Max-\u00d8",
    "flagged": "markierte(s) Projekt(e)", "no_restr": "Keine Restriktionen aktiv.",
    "restr_note": "Nicht gesetzte Werte verwenden den datensatztypischen Wert \u2014 konsistent zur Vorhersage."},
@@ -184,12 +126,10 @@ DE_CAT = {"Complexity": "Komplexit\u00e4t", "Efficiency": "Effizienz", "Risk": "
 DE_LABEL = {
  "Complexity_Score": "Komplexit\u00e4tswert", "Integration_Complexity": "Integrationskomplexit\u00e4t",
  "Cross_Functional_Dependencies": "Bereichs\u00fcbergreifende Abh\u00e4ngigkeiten",
- "External_Dependencies_Count": "Externe Abh\u00e4ngigkeiten (Anzahl)",
- "Technology_Familiarity": "Technologie-Vertrautheit",
+ "External_Dependencies_Count": "Externe Abh\u00e4ngigkeiten (Anzahl)", "Technology_Familiarity": "Technologie-Vertrautheit",
  "Tech_Environment_Stability": "Stabilit\u00e4t der Technikumgebung", "Technical_Debt_Level": "Technische Schulden",
  "Requirement_Stability": "Anforderungsstabilit\u00e4t", "Change_Request_Frequency": "H\u00e4ufigkeit \u00c4nderungsanfragen",
- "Team_Size": "Teamgr\u00f6\u00dfe", "Stakeholder_Count": "Anzahl Stakeholder",
- "Geographical_Distribution": "Geografische Verteilung",
+ "Team_Size": "Teamgr\u00f6\u00dfe", "Stakeholder_Count": "Anzahl Stakeholder", "Geographical_Distribution": "Geografische Verteilung",
  "Project_Budget_USD": "Projektbudget", "Budget_Utilization_Rate": "Budgetauslastung",
  "Estimated_Timeline_Months": "Gesch\u00e4tzte Laufzeit (Monate)", "Resource_Availability": "Ressourcenverf\u00fcgbarkeit",
  "Resource_Contention_Level": "Ressourcenkonkurrenz", "Current_Phase_Duration_Months": "Dauer aktuelle Phase (Monate)",
@@ -201,35 +141,28 @@ DE_LABEL = {
  "Risk_Management_Maturity": "Reife des Risikomanagements", "Change_Control_Maturity": "Reife der \u00c4nderungssteuerung",
  "Vendor_Reliability_Score": "Zuverl\u00e4ssigkeit der Dienstleister", "Team_Turnover_Rate": "Personalfluktuation",
  "Market_Volatility": "Marktvolatilit\u00e4t", "Industry_Volatility": "Branchenvolatilit\u00e4t",
- "Regulatory_Compliance_Level": "Regulatorische Anforderungen",
- "Data_Security_Requirements": "Datensicherheitsanforderungen",
+ "Regulatory_Compliance_Level": "Regulatorische Anforderungen", "Data_Security_Requirements": "Datensicherheitsanforderungen",
  "Seasonal_Risk_Factor": "Saisonaler Risikofaktor", "Executive_Sponsorship": "Management-Unterst\u00fctzung",
- "Stakeholder_Engagement_Level": "Stakeholder-Einbindung",
- "Key_Stakeholder_Availability": "Verf\u00fcgbarkeit zentraler Stakeholder",
- "Funding_Source": "Finanzierungsquelle", "Contract_Type": "Vertragsart",
- "Client_Experience_Level": "Kundenerfahrung",
+ "Stakeholder_Engagement_Level": "Stakeholder-Einbindung", "Key_Stakeholder_Availability": "Verf\u00fcgbarkeit zentraler Stakeholder",
+ "Funding_Source": "Finanzierungsquelle", "Contract_Type": "Vertragsart", "Client_Experience_Level": "Kundenerfahrung",
  "Organizational_Change_Frequency": "H\u00e4ufigkeit organisatorischer \u00c4nderungen", "Priority_Level": "Priorit\u00e4t",
- "Schedule_Pressure": "Zeitdruck", "Project_Phase": "Projektphase",
- "Project_Start_Month": "Projektstartmonat (1-12)"}
+ "Schedule_Pressure": "Zeitdruck", "Project_Phase": "Projektphase", "Project_Start_Month": "Projektstartmonat (1-12)"}
 VALUE_DE = {
  "Low": "Niedrig", "Medium": "Mittel", "High": "Hoch", "Very High": "Sehr hoch", "Critical": "Kritisch",
  "Volatile": "Volatil", "Moderate": "Moderat", "Stable": "Stabil", "New": "Neu", "Familiar": "Vertraut",
  "Expert": "Experte", "Poor": "Schlecht", "Excellent": "Ausgezeichnet", "Weak": "Schwach", "Strong": "Stark",
  "Ad-hoc": "Ad-hoc", "Defined": "Definiert", "Managed": "Gesteuert", "Optimizing": "Optimierend", "Strict": "Streng",
  "Limited": "Begrenzt", "Good": "Gut", "Legacy/Unstable": "Alt/Instabil", "Mixed": "Gemischt",
- "Modern/Stable": "Modern/Stabil", "Extreme": "Extrem", "Basic": "Basis", "Formal": "Formal",
- "Advanced": "Fortgeschritten",
+ "Modern/Stable": "Modern/Stabil", "Extreme": "Extrem", "Basic": "Basis", "Formal": "Formal", "Advanced": "Fortgeschritten",
  "Junior": "Junior", "Senior": "Senior", "Junior PM": "Junior-PM", "Mid-level PM": "Mittleres PM",
- "Senior PM": "Senior-PM", "Certified PM": "Zertifiziertes PM", "First-time": "Erstmalig",
- "Occasional": "Gelegentlich",
+ "Senior PM": "Senior-PM", "Certified PM": "Zertifiziertes PM", "First-time": "Erstmalig", "Occasional": "Gelegentlich",
  "Regular": "Regelm\u00e4\u00dfig", "Strategic": "Strategisch", "Agile": "Agil", "Kanban": "Kanban", "Scrum": "Scrum",
  "External": "Extern", "Government": "Staatlich", "Internal": "Intern", "Cost-Plus": "Cost-Plus",
  "Fixed-Price": "Festpreis", "Hybrid": "Hybrid", "Time & Materials": "Zeit & Material", "Closure": "Abschluss",
- "Execution": "Ausf\u00fchrung", "Initiation": "Initiierung", "Monitoring": "\u00dcberwachung", "Planung": "Planung",
- "Planning": "Planung",
+ "Execution": "Ausf\u00fchrung", "Initiation": "Initiierung", "Monitoring": "\u00dcberwachung", "Planning": "Planung",
  "Fully Colocated": "Voll vor Ort", "Fully Remote": "Voll remote", "Partially Colocated": "Teilweise vor Ort"}
 
-# Fachliche Kurzerklaerung je Merkmal (deutsch, englisch) fuer die Tooltips
+
 EXPL = {
     "Complexity_Score": ("Gesamtkomplexität des Projekts auf einer Skala von ~2 (sehr einfach) bis 10 (extrem komplex).", "Overall project complexity on a scale from ~2 (very simple) to 10 (extremely complex)."),
     "Integration_Complexity": ("Aufwand, das System mit bestehenden Systemen zu verbinden (1 = trivial, 10 = sehr aufwendig).", "Effort to integrate the system with existing ones (1 = trivial, 10 = very demanding)."),
@@ -281,7 +214,6 @@ EXPL = {
     "Project_Start_Month": ("Kalendermonat des Projektstarts (1 = Januar bis 12 = Dezember).", "Calendar month of project start (1 = January to 12 = December)."),
 }
 
-
 @st.cache_resource
 def _load():
     model, meta, spec, df = mb.load_all()
@@ -290,8 +222,8 @@ def _load():
 
 @st.cache_data(show_spinner=False)
 def cached_predict(params_items):
-    """Zwischenspeicher fuer Vorhersagen: identische Eingaben werden nicht neu
-    berechnet, wodurch der Wechsel zwischen den Ansichten fluessig bleibt."""
+    """Vorhersage cachen: identische Projekt-Eingaben werden nicht neu berechnet
+    (verhindert Neuaufbau aller Dashboard-Kacheln beim Tab-Wechsel)."""
     params = dict(params_items)
     order, proba = mb.predict(MODEL, META, params)
     return order, tuple(float(x) for x in proba)
@@ -303,7 +235,6 @@ def predict_proj(params):
     import numpy as _np
     return order, _np.array(proba)
 
-
 try:
     MODEL, META, SPEC, CTX = _load()
     LOAD_ERROR = None
@@ -311,27 +242,10 @@ except Exception as e:
     MODEL = META = SPEC = CTX = None
     LOAD_ERROR = str(e)
 
+st.set_page_config(page_title="IT Project Portfolio Risk Analyzer", layout="wide", initial_sidebar_state="expanded")
+
 st.markdown(f"""
 <style>
- /* --- Grundflaechen und Textfarben der gewaehlten Ansicht --- */
- :root, .stApp {{ --background-color:{BG}; --secondary-background-color:{PANEL_2};
-                  --text-color:{TEXT}; --primary-color:{HEAD}; }}
- .stApp {{ background:{BG}; }}
- [data-testid="stHeader"] {{ background:transparent; }}
- section[data-testid="stSidebar"] {{ background:{PANEL}; border-right:1px solid {BORDER}; }}
- .stApp, .stApp p, .stApp span, .stApp label, .stApp li,
- .stApp h1, .stApp h2, .stApp h3, .stApp h4 {{ color:{TEXT}; }}
- [data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p {{ color:{MUTED}; }}
- [data-testid="stDialog"] > div, [role="dialog"] {{ background:{BG}; }}
- [data-testid="stExpander"] {{ border:1px solid {BORDER}; border-radius:8px; background:{PANEL}; }}
- [data-testid="stExpander"] summary, [data-testid="stExpander"] summary p {{ color:{TEXT}; }}
- [data-testid="stToast"] {{ background:{PANEL_2}; color:{TEXT}; }}
- div[data-baseweb="select"] > div {{ background:{PANEL_2}; color:{TEXT}; border-color:{BORDER}; }}
- div[data-baseweb="popover"] li {{ background:{PANEL}; color:{TEXT}; }}
- .stButton > button {{ background:{PANEL}; color:{TEXT}; border:1px solid {BORDER}; font-size:1.02rem; }}
- .stButton > button:hover {{ border-color:{HEAD}; color:{TEXT}; }}
-
- /* --- Grundraster --- */
  .block-container {{ padding-top:4rem; padding-bottom:4rem; max-width:1800px; }}
  h1,h2,h3 {{ font-weight:600; letter-spacing:-0.01em; }}
  .subtle {{ color:{MUTED}; font-size:0.95rem; }}
@@ -344,39 +258,35 @@ st.markdown(f"""
               border:none !important; background:transparent !important; box-shadow:none !important; }}
  .st-key-proj_list, .st-key-break_list {{ border:1px solid {BORDER} !important; border-radius:8px !important;
               background:{BG} !important; }}
-
- /* --- Seitenleiste: Eintraege linksbuendig mit vorangestelltem Symbol --- */
+ /* Seitenleisten-Buttons: linksbündig mit vorangestelltem Symbol */
  section[data-testid="stSidebar"] .stButton > button {{ justify-content:flex-start !important;
               text-align:left !important; font-weight:500 !important; border:none !important;
               background:transparent !important; color:{TEXT} !important; padding:0.35rem 0.6rem !important; }}
  section[data-testid="stSidebar"] .stButton > button:hover {{ background:{PANEL_2} !important; }}
- /* Primaere Aktion der Seitenleiste: gefuellte Flaeche, die sich klar von der
-    darunterliegenden Portfolioliste abhebt */
+ /* Primäre Aktion der Seitenleiste: gefüllte Fläche, die sich klar von den
+    Portfolioeinträgen darunter abhebt */
  section[data-testid="stSidebar"] .st-key-new_pf .stButton > button {{
-              background:{HEAD} !important; color:{ON_ACCENT} !important;
+              background:{HEAD} !important; color:{BG} !important;
               border:1px solid {HEAD} !important; border-radius:8px !important;
               justify-content:center !important; text-align:center !important;
               font-weight:700 !important; letter-spacing:0.02em !important;
               padding:0.55rem 0.6rem !important; margin-bottom:0.5rem !important; }}
  section[data-testid="stSidebar"] .st-key-new_pf .stButton > button:hover {{
-              background:{TEXT} !important; border-color:{TEXT} !important; color:{BG} !important; }}
+              background:{TEXT} !important; border-color:{TEXT} !important;
+              color:{BG} !important; }}
  section[data-testid="stSidebar"] .st-key-new_pf .stButton > button p,
  section[data-testid="stSidebar"] .st-key-new_pf .stButton > button div {{
-              color:{ON_ACCENT} !important; font-weight:700 !important; }}
- section[data-testid="stSidebar"] .st-key-new_pf .stButton > button:hover p,
- section[data-testid="stSidebar"] .st-key-new_pf .stButton > button:hover div {{ color:{BG} !important; }}
- /* aktives Portfolio hervorheben */
+              color:{BG} !important; font-weight:700 !important; }}
+ /* aktives Portfolio deutlich hervorheben */
  section[data-testid="stSidebar"] .st-key-side_list .stButton > button[kind="primary"] {{
               background:{PANEL_2} !important; color:{TEXT} !important; font-weight:700 !important;
               border-left:3px solid {TEXT} !important; border-radius:6px !important; }}
- /* Sprach- und Darstellungswahl: zentriert, kompakt, aktiver Zustand sichtbar */
+ /* Sprach-Flaggen: zentriert, kompakt, aktiver Zustand sichtbar */
  section[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton > button {{
               justify-content:center !important; text-align:center !important;
               border:1px solid {BORDER} !important; }}
  section[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton > button[kind="primary"] {{
               background:{PANEL_2} !important; border-color:{HEAD} !important; color:{TEXT} !important; }}
-
- /* --- Kategorien und Merkmalsregler --- */
  .cat-header {{ color:{TEXT}; text-transform:uppercase; letter-spacing:0.14em; font-size:0.92rem; font-weight:800;
                  border-left:3px solid {HEAD}; padding-left:0.55rem; display:flex; align-items:center;
                  min-height:2.4rem; line-height:1; margin:0 0 0.9rem 0; }}
@@ -391,23 +301,21 @@ st.markdown(f"""
  .tick-hl i {{ background:{HEAD} !important; width:2px !important; height:8px !important; }}
  .tick i {{ display:block; width:1px; height:5px; background:{BORDER}; margin-bottom:3px; }}
  .divider {{ height:1px; background:{BORDER}; margin:1rem 0; border:none; }}
-
- /* --- Karten --- */
- [data-testid="stVerticalBlockBorderWrapper"] {{ border:1px solid {BORDER} !important;
-              border-radius:10px !important; background:{PANEL}; }}
- /* Karten einer Zeile auf gleiche Hoehe bringen */
+ /* klar sichtbare Karten-Rahmen + verschachtelte Tiefe */
+ [data-testid="stVerticalBlockBorderWrapper"] {{ border:1px solid {BORDER} !important; border-radius:10px !important; background:{PANEL}; }}
+ /* Karten in einer Zeile gleich hoch */
  [data-testid="stHorizontalBlock"] {{ align-items:stretch; }}
  [data-testid="stHorizontalBlock"] > div,
  [data-testid="stColumn"] {{ display:flex; flex-direction:column; }}
  [data-testid="stHorizontalBlock"] > div > div,
  [data-testid="stColumn"] > div {{ flex:1; display:flex; flex-direction:column; }}
  [data-testid="stHorizontalBlock"] [data-testid="stVerticalBlockBorderWrapper"] {{ flex:1; height:auto; }}
+ .stButton > button {{ font-size:1.02rem; }}
  [data-testid="stHorizontalBlock"] .stButton > button {{ font-weight:700; }}
  [data-testid="stNumberInput"] input {{ background:{PANEL_2} !important; color:{TEXT} !important; }}
  [data-baseweb="input"] {{ background:{PANEL_2} !important; }}
- [data-baseweb="input"] input {{ color:{TEXT} !important; }}
  [data-testid="stNumberInputContainer"] {{ background:{PANEL_2} !important; }}
- .nom-warn {{ color:{AMBER}; font-size:0.74rem; line-height:1.2; margin:0.1rem 0 0.4rem 0;
+ .nom-warn {{ color:#d9a441; font-size:0.74rem; line-height:1.2; margin:0.1rem 0 0.4rem 0;
              min-height:2.4rem; overflow:hidden; }}
  .icon-btn {{ margin:0 !important; }}
  .icon-btn > button {{ font-size:1.05rem !important; font-weight:800 !important;
@@ -419,37 +327,32 @@ st.markdown(f"""
  .restr-rate {{ font-size:0.66rem !important; letter-spacing:-0.02em; white-space:nowrap;
                 overflow:hidden; text-overflow:ellipsis; height:1.6rem !important;
                 align-items:flex-start !important; }}
- /* Auswahl-Chips der Restriktionen lesbar halten */
+ /* Multiselect-Tags (Restriktionen) lesbar: dunkler Chip, heller Text */
  [data-baseweb="tag"] {{ background-color:{PANEL_2} !important; color:{TEXT} !important;
                          border:1px solid {BORDER} !important; }}
  [data-baseweb="tag"] span {{ color:{TEXT} !important; }}
  [data-baseweb="tag"] svg {{ fill:{TEXT} !important; }}
- /* zurueckhaltender Detailbutton */
+ /* dezenter Details-Button */
  .subtle-btn > button {{ background:transparent !important; border:1px solid {BORDER} !important;
                          color:{MUTED} !important; font-size:0.82rem !important; padding:0.2rem 0.6rem !important; }}
  .subtle-btn > button:hover {{ border-color:{HEAD} !important; color:{TEXT} !important; }}
  .subtle-btn > button p {{ color:{MUTED} !important; }}
- /* Kategoriekoerper auf einheitliche Mindesthoehe */
+ /* Kategorie-Koerper (Aggregat vs. einzeln gesetzt) auf gleiche Mindesthoehe */
  .cat-body {{ height:6.7rem; }}
  .eqcard {{ height:16.5rem; display:flex; flex-direction:column; }}
- @keyframes flashrow {{ 0% {{ background:{FLASH}; }} 100% {{ background:transparent; }} }}
+ @keyframes flashrow {{ 0% {{ background:rgba(91,181,107,0.55); }} 100% {{ background:transparent; }} }}
  .proj-row {{ border-radius:6px; padding:0.15rem 0; }}
  .proj-row.flash {{ animation:flashrow 1.6s ease-out 1; }}
- /* Dateiupload zentriert */
- [data-testid="stFileUploaderDropzone"] {{ justify-content:center; text-align:center;
-              background:{PANEL_2}; border:1px dashed {BORDER}; }}
+ /* Datei-Upload zentriert */
+ [data-testid="stFileUploaderDropzone"] {{ justify-content:center; text-align:center; }}
  [data-testid="stFileUploaderDropzone"] > div {{ display:flex; flex-direction:column; align-items:center; }}
  [data-testid="stFileUploaderDropzoneInstructions"] {{ align-items:center; text-align:center; }}
- [data-testid="stFileUploaderDropzone"] span, [data-testid="stFileUploaderDropzone"] div {{ color:{TEXT}; }}
  [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlockBorderWrapper"] {{ background:{BG}; }}
- /* aktiver Navigations- oder Sprachbutton */
- .stButton > button[kind="primary"] {{ background:{PANEL_2} !important; color:{TEXT} !important;
-              border:1px solid {HEAD} !important; box-shadow:none !important; outline:none !important; }}
- .stButton > button[kind="primary"]:focus, .stButton > button[kind="primary"]:active,
- .stButton > button[kind="primary"]:focus-visible {{ box-shadow:none !important; outline:none !important; }}
+ /* Aktiver Navigations- oder Sprachbutton: heller Text auf dunkler Fläche */
+ .stButton > button[kind="primary"] {{ background:{PANEL_2} !important; color:{TEXT} !important; border:1px solid {HEAD} !important; box-shadow:none !important; outline:none !important; }}
+ .stButton > button[kind="primary"]:focus, .stButton > button[kind="primary"]:active, .stButton > button[kind="primary"]:focus-visible {{ box-shadow:none !important; outline:none !important; }}
  .stButton > button[kind="primary"] p, .stButton > button[kind="primary"] div {{ color:{TEXT} !important; }}
- div[data-baseweb="slider"] div[role="slider"] {{ background:{HEAD} !important;
-              border:2px solid {TEXT} !important; box-shadow:0 0 0 4px {GLOW} !important; }}
+ div[data-baseweb="slider"] div[role="slider"] {{ background:{HEAD} !important; border:2px solid {TEXT} !important; box-shadow:0 0 0 4px rgba(216,213,205,0.20) !important; }}
  [data-testid="stThumbValue"] {{ color:{TEXT} !important; font-weight:700 !important;
      background:{PANEL_2} !important; padding:0 5px; border-radius:4px; }}
  /* Standardbeschriftung des Reglers ausblenden; die Stufen werden selbst gezeichnet */
@@ -457,6 +360,15 @@ st.markdown(f"""
  [data-testid="stSliderTickBarMin"], [data-testid="stSliderTickBarMax"] {{ display:none !important; }}
 </style>
 """, unsafe_allow_html=True)
+
+ss = st.session_state
+ss.setdefault("lang", "en")
+ss.setdefault("portfolios", {})
+ss.setdefault("active", None)
+ss.setdefault("view", "Configure")
+ss.setdefault("draft_id", 0)
+ss.setdefault("pf_counter", 0)
+MIN_FEATURES = 1
 
 
 def T(k, **kw):
@@ -490,7 +402,7 @@ def _join_names(names):
 
 
 def risk_label(cls):
-    """Gibt die Risikostufe sprachlich korrekt flektiert aus."""
+    """Korrekt flektiertes Risiko-Label: 'Niedriges Risiko' / 'Low risk'."""
     if ss.lang == "de":
         forms = {"Low": "Niedriges", "Medium": "Mittleres", "High": "Hohes", "Critical": "Kritisches"}
         return f"{forms.get(cls, vopt(cls))} Risiko"
@@ -509,7 +421,7 @@ def new_portfolio():
 
 
 # --------------------------------------------------------------------------------------
-# Seitenleiste
+# Sidebar
 # --------------------------------------------------------------------------------------
 with st.sidebar:
     st.markdown(
@@ -519,11 +431,10 @@ with st.sidebar:
         unsafe_allow_html=True)
 
     st.markdown(f"<div class='side-sec'>{T('portfolios')}</div>", unsafe_allow_html=True)
-    with st.container(key="new_pf"):
-        if st.button("\uFF0B\u2002" + T("new_portfolio"), use_container_width=True):
-            new_portfolio(); st.rerun()
+    if st.button("\uFF0B\u2002" + T("new_portfolio"), key="new_pf", use_container_width=True):
+        new_portfolio(); st.rerun()
 
-    with st.container(height=600, border=True, key="side_list"):
+    with st.container(height=780, border=True, key="side_list"):
         if ss.portfolios:
             for pid, pf in list(ss.portfolios.items()):
                 is_active = pid == ss.active
@@ -543,17 +454,6 @@ with st.sidebar:
         if lc2.button("\U0001F1E9\U0001F1EA\u2002DE", key="lang_de", use_container_width=True,
                       type="primary" if ss.lang == "de" else "secondary"):
             ss.lang = "de"; st.rerun()
-
-        st.markdown(f"<div class='side-sec' style='margin-top:0.6rem;'>{T('appearance')}</div>",
-                    unsafe_allow_html=True)
-        tc1, tc2 = st.columns(2)
-        if tc1.button("\u2600\uFE0E\u2002" + T("theme_light"), key="theme_light", use_container_width=True,
-                      type="primary" if ss.theme == "light" else "secondary"):
-            ss.theme = "light"; st.rerun()
-        if tc2.button("\u263D\uFE0E\u2002" + T("theme_dark"), key="theme_dark", use_container_width=True,
-                      type="primary" if ss.theme == "dark" else "secondary"):
-            ss.theme = "dark"; st.rerun()
-
         st.markdown(f"<div class='side-sec' style='margin-top:0.6rem;'>{T('data_sec')}</div>",
                     unsafe_allow_html=True)
         up = st.file_uploader(T("load_pf"), type="json", key="pf_upload", label_visibility="collapsed")
@@ -571,11 +471,11 @@ with st.sidebar:
             st.warning(T("load_err_pf"))
 
 
+
 # --------------------------------------------------------------------------------------
-# Hilfsfunktionen der Darstellung
+# Helper
 # --------------------------------------------------------------------------------------
 def _ticks(opts, highlight=None):
-    """Zeichnet die Stufenbeschriftung unter einem Regler."""
     n = len(opts)
     items = ""
     for i, o in enumerate(opts):
@@ -590,7 +490,6 @@ def _grad(d):
 
 
 def _mini(feat):
-    """Farbverlauf, der die Risikorichtung eines Merkmals andeutet."""
     d = SPEC[feat]["direction"]
     if d == 0:
         return ""
@@ -620,43 +519,28 @@ def _tip(feat):
 
 
 def reliability(n):
-    """Grobe Einschaetzung, wie stark eine Vorhersage auf Standardwerten beruht."""
-    if n < 15:  return T("rel_low"), ORANGE
-    if n < 30:  return T("rel_med"), AMBER
+    if n < 15:  return T("rel_low"), "#e5844d"
+    if n < 30:  return T("rel_med"), "#d9a441"
     return T("rel_high"), GREEN
 
 
 # --------------------------------------------------------------------------------------
-# Restriktionen
-# --------------------------------------------------------------------------------------
 SUM_CANDIDATES = ["Team_Size", "Project_Budget_USD", "External_Dependencies_Count",
-                  "Stakeholder_Count", "Cross_Functional_Dependencies"]   # Typ A: addierbar
+                  "Stakeholder_Count", "Cross_Functional_Dependencies"]                 # Typ A (addierbar)
 SUM_DEFAULT = ["Team_Size", "Project_Budget_USD"]
 AVG_FEATS = {"Resource_Availability": "min", "Budget_Utilization_Rate": "max",
-             "Schedule_Pressure": "max"}                                  # Typ B: Durchschnitte
-REG_FEAT = "Regulatory_Compliance_Level"                                  # Typ C: Einzelprojektregel
-
-# Grenzwerte je Merkmal auf Portfolioebene. Sie sind von der Anzahl der Projekte
-# unabhaengig und dienen als Ausgangspunkt, den der Nutzer anpasst.
-PER_PORTFOLIO_BASE = {
-    "Team_Size": 50.0,                       # Personen im gesamten Portfolio
-    "Project_Budget_USD": 5_000_000.0,       # Gesamtbudget des Portfolios
-    "External_Dependencies_Count": 25.0,
-    "Stakeholder_Count": 50.0,
-    "Cross_Functional_Dependencies": 25.0,
-}
+             "Schedule_Pressure": "max"}                                            # Typ B
+REG_FEAT  = "Regulatory_Compliance_Level"                                           # Typ C
 
 
 def eff(params, feat):
-    """Effektiver Wert eines Merkmals: Nutzereingabe oder der Standardwert aus
-    dem Training, damit die Restriktionspruefung derselben Grundlage folgt wie
-    die Vorhersage."""
+    """Effektiver Wert = Nutzereingabe oder datensatztypischer Standardwert (wie beim Modell)."""
     v = params.get(feat)
     return META["defaults"][feat] if v is None else v
 
 
 def _step(f):
-    """Schrittweite des Eingabefelds je nach Wertetyp."""
+    """Sinnvolle Schrittweite je Merkmal."""
     kind = SPEC[f].get("kind")
     if kind == "money":  return 50000.0
     if kind == "rate":   return 0.05
@@ -665,7 +549,7 @@ def _step(f):
 
 
 def _nice(v, kind):
-    """Rundet einen Grenzwert auf einen gut lesbaren Betrag."""
+    """Auf einen gut lesbaren Grenzwert runden."""
     if kind == "money":
         return round(v / 500_000) * 500_000 if v >= 500_000 else round(v / 100_000) * 100_000
     if kind == "rate":
@@ -675,8 +559,19 @@ def _nice(v, kind):
     return round(v * 2) / 2
 
 
+# Grenzwerte je Merkmal auf Portfolioebene. Sie sind von der Anzahl der Projekte
+# unabhängig und dienen als Ausgangspunkt, den der Nutzer anpasst.
+PER_PORTFOLIO_BASE = {
+    "Team_Size": 50.0,                       # Personen im gesamten Portfolio
+    "Project_Budget_USD": 5_000_000.0,       # Gesamtbudget des Portfolios
+    "External_Dependencies_Count": 25.0,
+    "Stakeholder_Count": 50.0,
+    "Cross_Functional_Dependencies": 25.0,
+}
+
+
 def default_limits(n, sum_feats):
-    """Startwerte der Portfoliogrenzen. Die Anzahl der Projekte fliesst nicht in
+    """Startwerte der Portfoliogrenzen. Die Anzahl der Projekte fließt nicht in
     die Skalierung ein, damit die Vorgaben reproduzierbar bleiben."""
     lim = {}
     for f in sum_feats:
@@ -709,17 +604,16 @@ def render_restrictions(pf):
             cols = st.columns(min(len(r["sum_feats"]), 3))
             for i, f in enumerate(r["sum_feats"]):
                 with cols[i % len(cols)]:
-                    lo = 1.0 if f == "Team_Size" else 0.0
-                    # Die Obergrenze des Eingabefelds waechst mit der Anzahl der
-                    # Projekte, damit auch grosse Portfolios abbildbar bleiben.
+                    lo = 1.0 if f == "Team_Size" else 0.0     # >=1 Person bzw. >=0 Euro
+                    # Die Obergrenze des Eingabefelds wächst mit der Anzahl der
+                    # Projekte, damit auch große Portfolios abbildbar bleiben.
                     unbounded = f in ("Team_Size", "Project_Budget_USD")
                     hi = None if unbounded else max(
                         float(SPEC[f]["max"]) * max(len(pf["projects"]), 1),
                         float(PER_PORTFOLIO_BASE.get(f, 0.0)))
                     cur = float(r["limits"].get(f, base.get(f, lo)))
                     cur = max(cur, lo) if hi is None else min(max(cur, lo), hi)
-                    st.markdown(f"<div class='restr-label restr-label-sm'>{L(f)}</div>",
-                                unsafe_allow_html=True)
+                    st.markdown(f"<div class='restr-label restr-label-sm'>{L(f)}</div>", unsafe_allow_html=True)
                     r["limits"][f] = st.number_input(" ", min_value=lo, max_value=hi, value=cur,
                                                      step=_step(f), key=f"lim_{f}",
                                                      label_visibility="collapsed")
@@ -748,8 +642,7 @@ def render_restrictions(pf):
 
 
 def check_restrictions(pf):
-    """Prueft alle aktiven Grenzwerte und liefert Zeilen fuer die Ergebnisansicht
-    sowie die Anzahl der Verletzungen."""
+    """-> (rows, n_violations). rows: (label, actual_str, limit_str, ok)"""
     r = pf.get("restrictions", {})
     if not r.get("enabled"):
         return [], 0
@@ -760,7 +653,7 @@ def check_restrictions(pf):
         ok = total <= lim[f]
         viol += 0 if ok else 1
         rows.append((f"{L(f)}", f"{total:,.0f}", f"\u2264 {lim[f]:,.0f}", ok))
-    for f, mode in AVG_FEATS.items():                      # Typ B: Durchschnitte
+    for f, mode in AVG_FEATS.items():                     # Typ B: Durchschnitte
         avg = sum(eff(p["params"], f) for p in projs) / max(len(projs), 1)
         ok = (avg >= lim[f]) if mode == "min" else (avg <= lim[f])
         viol += 0 if ok else 1
@@ -779,7 +672,7 @@ def check_restrictions(pf):
 
 
 # ======================================================================================
-# Startzustand ohne Portfolio
+# EMPTY STATE
 # ======================================================================================
 def render_empty_state():
     st.markdown(f"""<div style="text-align:center; padding:6rem 0;">
@@ -792,12 +685,9 @@ def render_empty_state():
 
 
 # ======================================================================================
-# Konfigurationsansicht
+# CONFIGURE
 # ======================================================================================
 def render_feature(pid, feat):
-    """Eingabeelement fuer ein einzelnes Merkmal. Numerische Merkmale bieten
-    zusaetzlich ein Feld fuer einen exakten Wert; ist es gefuellt, zeigt der
-    Regler nur noch die naechstgelegene Stufe an."""
     spec = SPEC[feat]
     st.markdown(f"<div class='param-label'><span title='{_tip(feat)}'>{L(feat)} &#9432;</span>{_mini(feat)}</div>",
                 unsafe_allow_html=True)
@@ -832,22 +722,16 @@ def render_feature(pid, feat):
         if custom_val is not None:
             return custom_val
         return None if choice == "N/A" else spec["value_map"][back[choice]]
-    choice = st.select_slider(" ", options=disp, value="N/A", key=f"in_{pid}_{feat}",
-                              label_visibility="collapsed")
+    choice = st.select_slider(" ", options=disp, value="N/A", key=f"in_{pid}_{feat}", label_visibility="collapsed")
     st.markdown(_ticks(disp), unsafe_allow_html=True)
     return None if choice == "N/A" else spec["value_map"][back[choice]]
 
 
 def render_category_aggregate(pid, crit, feats):
-    """Sammelregler einer Kategorie. Die gewaehlte Stufe wird auf alle Merkmale
-    der Kategorie uebertragen; Merkmale, bei denen ein hoeherer Wert weniger
-    Risiko bedeutet, werden dabei gespiegelt. Nominale Merkmale besitzen keine
-    Rangordnung und bleiben ungesetzt."""
     st.markdown(f"<div class='param-label'><span title='{T('tip_agg')}'>{T('overall')} {CAT(crit)} &#9432;</span>"
                 f"{_mini_cat(crit)}</div>", unsafe_allow_html=True)
     disp = ["N/A"] + [vopt(x) for x in AGG_EN[1:]]
-    choice = st.select_slider(" ", options=disp, value="N/A", key=f"agg_{pid}_{crit}",
-                              label_visibility="collapsed")
+    choice = st.select_slider(" ", options=disp, value="N/A", key=f"agg_{pid}_{crit}", label_visibility="collapsed")
     st.markdown(_ticks(disp), unsafe_allow_html=True)
     idx = disp.index(choice)
     noms = [f for f in feats if SPEC[f]["type"] == "nominal"]
@@ -875,8 +759,7 @@ HAS_DIALOG = hasattr(st, "dialog")
 
 
 def open_cat_dialog(pid, crit, feats):
-    """Oeffnet alle Merkmale einer Kategorie im Dialog, damit die Seite beim
-    Feineinstellen nicht springt."""
+    """Popup mit allen Merkmalen der Kategorie (kein Springen der Seite)."""
     def _body():
         vals = {}
         cols = st.columns(2)
@@ -902,7 +785,7 @@ def open_cat_dialog(pid, crit, feats):
 
 
 def open_project_dialog(proj, order, proba):
-    """Zeigt Risikotreiber und gesetzte Merkmale eines Projekts."""
+    """Popup mit Treibern und gesetzten Merkmalen eines Projekts."""
     def _body():
         render_project_details(order, proba, proj["params"])
     if HAS_DIALOG:
@@ -916,8 +799,6 @@ def open_project_dialog(proj, order, proba):
 
 
 def render_category_card(pid, crit, feats, draft):
-    """Karte einer Kategorie: entweder Sammelregler oder, sobald Merkmale einzeln
-    gesetzt wurden, deren Zusammenfassung."""
     key = f"{pid}_{crit}"
     saved = ss.get("catvals", {}).get(key)
     with st.container(border=True):
@@ -949,12 +830,11 @@ def render_configure(pf):
     st.markdown(f"## {T('pf_config')}")
     left, right = st.columns([0.38, 0.62], gap="medium")
 
-    # Portfolioebene
+    # ---------------- Portfolio View (links) ----------------
     with left:
         with st.container(border=True):
             st.markdown(f"<div class='cat-header'>{T('portfolio_view')}</div>", unsafe_allow_html=True)
-            _pfn = st.text_input(T("pf_name"), value="" if pf.get("auto_name") else pf["name"],
-                                 placeholder=T("portfolio_default"))
+            _pfn = st.text_input(T("pf_name"), value="" if pf.get("auto_name") else pf["name"], placeholder=T("portfolio_default"))
             pf["auto_name"] = not _pfn.strip()
             pf["name"] = _pfn.strip() or T("portfolio_default")
             st.markdown(f"<div class='param-label'>{T('added_projects')}</div>", unsafe_allow_html=True)
@@ -982,7 +862,7 @@ def render_configure(pf):
                         st.markdown("</div>", unsafe_allow_html=True)
             render_restrictions(pf)
 
-    # Projektebene
+    # ---------------- Project View (rechts) ----------------
     pid = ss.draft_id
     with right:
         with st.container(border=True):
@@ -1000,7 +880,7 @@ def render_configure(pf):
                     for col, (crit, feats) in zip(cols, row):
                         with col:
                             render_category_card(pid, crit, feats, draft)
-                else:                                      # letzte einzelne Karte mittig setzen
+                else:                                          # letzte einzelne Karte mittig setzen
                     _, mid, _ = st.columns([0.25, 0.5, 0.25])
                     with mid:
                         crit, feats = row[0]
@@ -1029,10 +909,9 @@ def render_configure(pf):
 
 
 # ======================================================================================
-# Ergebnisansicht
+# RESULTS
 # ======================================================================================
 def prob_bars(order, proba, pred):
-    """Wahrscheinlichkeitsbalken je Risikoklasse."""
     rows = ""
     for cls, p in zip(order, proba):
         c = LEVEL_COLORS[cls]
@@ -1046,8 +925,6 @@ def prob_bars(order, proba, pred):
 
 
 def _driver_rows(items, maxabs):
-    """Zeilen der Treiberliste; die Balkenlaenge ist auf den staerksten Treiber
-    normiert."""
     rows = ""
     for feat, v, is_set in items:
         c = RED if v > 0 else GREEN
@@ -1057,31 +934,23 @@ def _driver_rows(items, maxabs):
                  f" overflow:hidden; text-overflow:ellipsis;'>{L(feat)}{tag}</div>"
                  f"<div style='width:80px; flex-shrink:0; background:{PANEL_2}; border-radius:5px; height:9px;'>"
                  f"<div style='width:{abs(v)/maxabs*100:.0f}%; background:{c}; height:9px; border-radius:5px;'></div></div>"
-                 f"<div style='width:44px; flex-shrink:0; text-align:right; color:{c}; font-size:0.78rem;"
-                 f" font-weight:600;'>{v:+.2f}</div></div>")
+                 f"<div style='width:44px; flex-shrink:0; text-align:right; color:{c}; font-size:0.78rem; font-weight:600;'>{v:+.2f}</div></div>")
     return rows
 
 
 def render_project_details(order, proba, params):
-    """Detailansicht eines Projekts: risikotreibende und risikomindernde
-    Merkmale, daraus abgeleitete Hinweise sowie die gesetzten Eingaben."""
     drivers = mb.explain(CTX, META, params, order, proba)
     pos = [d for d in drivers if d[1] > 0][:5]
     neg = sorted([d for d in drivers if d[1] < 0], key=lambda x: x[1])[:5]
     maxabs = max([abs(v) for _, v, _ in pos + neg], default=1) or 1
-    st.markdown(f"<div class='subtle' style='font-size:0.75rem;'>{T('shap_note')}</div>",
-                unsafe_allow_html=True)
+    st.markdown(f"<div class='subtle' style='font-size:0.75rem;'>{T('shap_note')}</div>", unsafe_allow_html=True)
     dc1, dc2 = st.columns(2, gap="large")
     with dc1:
-        st.markdown(f"<div class='cat-header' style='color:{RED};'>{T('drivers_up')}</div>",
-                    unsafe_allow_html=True)
-        st.markdown(_driver_rows(pos, maxabs) or "<span class='subtle'>\u2014</span>",
-                    unsafe_allow_html=True)
+        st.markdown(f"<div class='cat-header' style='color:{RED};'>{T('drivers_up')}</div>", unsafe_allow_html=True)
+        st.markdown(_driver_rows(pos, maxabs) or "<span class='subtle'>\u2014</span>", unsafe_allow_html=True)
     with dc2:
-        st.markdown(f"<div class='cat-header' style='color:{GREEN};'>{T('drivers_down')}</div>",
-                    unsafe_allow_html=True)
-        st.markdown(_driver_rows(neg, maxabs) or "<span class='subtle'>\u2014</span>",
-                    unsafe_allow_html=True)
+        st.markdown(f"<div class='cat-header' style='color:{GREEN};'>{T('drivers_down')}</div>", unsafe_allow_html=True)
+        st.markdown(_driver_rows(neg, maxabs) or "<span class='subtle'>\u2014</span>", unsafe_allow_html=True)
     st.caption(T("default_expl"))
 
     if pos or neg:
@@ -1104,7 +973,7 @@ def render_project_details(order, proba, params):
                 unsafe_allow_html=True)
     set_crits = [(crit, feats) for crit, feats in mb.KUB_GROUPS.items()
                  if any(params.get(f) is not None for f in feats)]
-    for rs in range(0, len(set_crits), 2):                 # zweispaltig, spart Breite
+    for rs in range(0, len(set_crits), 2):                    # zweispaltig, spart Breite
         cols = st.columns(2, gap="small")
         for col, (crit, feats) in zip(cols, set_crits[rs:rs + 2]):
             setf = [(f, params[f]) for f in feats if params.get(f) is not None]
@@ -1147,7 +1016,6 @@ def render_project_card(i, proj):
 
 
 def _tile(label, value, color, tip=""):
-    """Kennzahlenkachel der Ergebnisuebersicht."""
     t = f" title='{tip}'" if tip else ""
     info = " &#9432;" if tip else ""
     return (f"<div style='background:{PANEL}; border:1px solid {BORDER}; border-radius:10px;"
@@ -1159,7 +1027,6 @@ def _tile(label, value, color, tip=""):
 
 
 def _dist_chart(per_project):
-    """Verteilung der Projekte auf die vier Risikoklassen."""
     counts = {c: 0 for c in META["target_order"]}
     for order, proba in per_project:
         counts[order[list(proba).index(max(proba))]] += 1
@@ -1171,8 +1038,8 @@ def _dist_chart(per_project):
                  f"<div style='width:74px; color:{MUTED}; font-size:0.8rem;'>{vopt(cls)}</div>"
                  f"<div style='flex:1; background:{PANEL_2}; border-radius:5px; height:12px;'>"
                  f"<div style='width:{n/total*100:.0f}%; background:{c}; height:12px; border-radius:5px;'></div></div>"
-                 f"<div style='width:26px; text-align:right; color:{TEXT}; font-size:0.8rem;"
-                 f" font-weight:600;'>{n}</div></div>")
+                 f"<div style='width:26px; text-align:right; color:{TEXT}; font-size:0.8rem; font-weight:600;'>{n}</div>"
+                 f"</div>")
     return rows
 
 
@@ -1189,7 +1056,7 @@ def render_results(pf):
     p_color = LEVEL_COLORS[pm["level"]]
     rows, viol = check_restrictions(pf)
 
-    # Kennzahlen
+    # ---- Zeile 1: KPI-Kacheln ----
     k = st.columns(4, gap="small")
     k[0].markdown(_tile(T("tile_total"), vopt(pm["level"]), p_color), unsafe_allow_html=True)
     k[1].markdown(_tile(T("tile_pelev"), f"{pm['p_at_least_one_elevated']:.0%}", TEXT, T("tip_elev")),
@@ -1204,13 +1071,12 @@ def render_results(pf):
 
     st.markdown("<div style='height:0.7rem;'></div>", unsafe_allow_html=True)
 
-    # Verteilung und Restriktionspruefung nebeneinander
+    # ---- Zeile 2: Verteilung + Restriktionspruefung nebeneinander (50/50 -> Mitte deckt sich) ----
     c1, c2 = st.columns(2, gap="small", vertical_alignment="top")
     with c1:
         with st.container(border=True):
-            st.markdown(f"<div class='eqcard'><div class='cat-header'>{T('distribution')} \u00b7 "
-                        f"{pm['n']} {T('dist_unit')}</div>{_dist_chart(per_project)}</div>",
-                        unsafe_allow_html=True)
+            st.markdown(f"<div class='eqcard'><div class='cat-header'>{T('distribution')} \u00b7 {pm['n']} {T('dist_unit')}</div>"
+                        f"{_dist_chart(per_project)}</div>", unsafe_allow_html=True)
     with c2:
         with st.container(border=True):
             body = f"<div class='eqcard'><div class='cat-header'>{T('restr_check')}</div>"
@@ -1225,13 +1091,13 @@ def render_results(pf):
                              f" overflow:hidden; text-overflow:ellipsis; white-space:nowrap;'>{label}</div>"
                              f"<div style='width:110px; text-align:right; color:{MUTED}; font-size:0.75rem;'>{actual}</div>"
                              f"<div style='width:100px; text-align:right; color:{MUTED}; font-size:0.75rem;'>{limit}</div>"
-                             f"<div style='width:64px; text-align:right; color:{c}; font-weight:700;"
-                             f" font-size:0.75rem;'>{T('ok') if ok else T('violated')}</div></div>")
+                             f"<div style='width:64px; text-align:right; color:{c}; font-weight:700; font-size:0.75rem;'>"
+                             f"{T('ok') if ok else T('violated')}</div></div>")
                 body += f"<div class='subtle' style='margin-top:0.4rem; font-size:0.72rem;'>{T('restr_note')}</div>"
             body += "</div>"
             st.markdown(body, unsafe_allow_html=True)
 
-    # Einzelprojekte, ab sieben Projekten in einem scrollbaren Bereich
+    # ---- Zeile 3: Projektkarten (2 Spalten, ab 6 Projekten scrollbar) ----
     st.markdown(f"### {T('breakdown')}")
     projs = list(enumerate(pf["projects"]))
     break_box = st.container(height=680, border=True, key="break_list") if len(projs) > 6 else nullcontext()
@@ -1251,8 +1117,6 @@ def render_results(pf):
                        use_container_width=True)
 
 
-# ======================================================================================
-# Navigation und Einstiegspunkt
 # ======================================================================================
 active_pf = ss.portfolios.get(ss.active) if ss.active in ss.portfolios else None
 show_nav = bool(active_pf and active_pf.get("calculated"))
