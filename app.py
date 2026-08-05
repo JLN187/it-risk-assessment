@@ -136,7 +136,7 @@ DE_LABEL = {
  "Communication_Frequency": "Kommunikationsfrequenz", "Documentation_Quality": "Dokumentationsqualit\u00e4t",
  "Org_Process_Maturity": "Prozessreife der Organisation", "Team_Experience_Level": "Team-Erfahrungsniveau",
  "Project_Manager_Experience": "Projektleiter-Erfahrung", "Past_Similar_Projects": "Fr\u00fchere \u00e4hnliche Projekte",
- "Previous_Delivery_Success_Rate": "Bisherige Liefererfolgsquote", "Methodology_Used": "Vorgehensmodell",
+ "Previous_Delivery_Success_Rate": "Bisherige Liefererfolgsquote", "Methodology_Used": "Arbeitsweise",
  "Team_Colocation": "Team-Verteilung", "Historical_Risk_Incidents": "Fr\u00fchere Risikovorf\u00e4lle",
  "Risk_Management_Maturity": "Reife des Risikomanagements", "Change_Control_Maturity": "Reife der \u00c4nderungssteuerung",
  "Vendor_Reliability_Score": "Zuverl\u00e4ssigkeit der Dienstleister", "Team_Turnover_Rate": "Personalfluktuation",
