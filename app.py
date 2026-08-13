@@ -214,6 +214,89 @@ EXPL = {
     "Project_Start_Month": ("Kalendermonat des Projektstarts (1 = Januar bis 12 = Dezember).", "Calendar month of project start (1 = January to 12 = December)."),
 }
 
+# Begriffsklärungen für Merkmale, deren Bezeichnung allein nicht eindeutig ist.
+# Erscheinen im Tooltip als eigener Absatz unter der Skalenerklärung.
+DEFS = {
+    "Technical_Debt_Level": (
+        "Technische Schulden: Mehraufwände in der Softwareentwicklung, die entstehen, wenn man sich für schnelle, aber suboptimale Lösungen anstelle von sauberem Code entscheidet.",
+        "Technical debt: additional effort in software development that arises when quick but suboptimal solutions are chosen instead of clean code."),
+    "Complexity_Score": (
+        "Komplexitätswert: ein im Datensatz vorgegebener Sammelwert, der Umfang, Technik und Abhängigkeiten eines Projekts zu einer einzigen Kennzahl zusammenfasst.",
+        "Complexity score: a composite value provided by the dataset that condenses scope, technology and dependencies into a single figure."),
+    "Integration_Complexity": (
+        "Integration: das Verbinden des neuen Systems mit bestehenden Anwendungen, sodass Daten und Abläufe zusammenpassen.",
+        "Integration: connecting the new system to existing applications so that data and processes fit together."),
+    "Cross_Functional_Dependencies": (
+        "Bereichsübergreifende Abhängigkeit: das Projekt ist auf Zuarbeit aus anderen Abteilungen angewiesen, etwa Einkauf, Recht oder Vertrieb.",
+        "Cross-functional dependency: the project relies on input from other departments such as procurement, legal or sales."),
+    "Tech_Environment_Stability": (
+        "Alt/Instabil (Legacy): ältere Systeme, die noch im Betrieb sind, aber kaum weiterentwickelt werden und deren Anpassung entsprechend aufwendig ist.",
+        "Legacy/Unstable: older systems still in operation but barely maintained, which makes any adaptation costly."),
+    "Change_Request_Frequency": (
+        "Änderungsanfrage: ein förmlicher Antrag, den vereinbarten Leistungsumfang während des laufenden Projekts zu ändern.",
+        "Change request: a formal request to alter the agreed scope while the project is running."),
+    "Change_Control_Maturity": (
+        "Änderungssteuerung: das geregelte Verfahren, mit dem Änderungsanfragen bewertet, genehmigt und dokumentiert werden. Der Reifegrad beschreibt, wie verbindlich dieses Verfahren ist.",
+        "Change control: the defined procedure for assessing, approving and documenting change requests. Maturity describes how binding that procedure is."),
+    "Risk_Management_Maturity": (
+        "Reifegrad: wie systematisch und verbindlich ein Verfahren in der Organisation verankert ist, von gar nicht vorhanden bis fest etabliert und laufend verbessert.",
+        "Maturity: how systematically and bindingly a procedure is embedded in the organisation, from not present at all to firmly established and continuously improved."),
+    "Org_Process_Maturity": (
+        "Prozessreife: wie einheitlich Abläufe geregelt sind. Ad-hoc bedeutet, dass jeder anders vorgeht; Optimierend bedeutet, dass Abläufe festgelegt, gemessen und laufend verbessert werden.",
+        "Process maturity: how uniformly procedures are defined. Ad-hoc means everyone works differently; Optimising means procedures are defined, measured and continuously improved."),
+    "Stakeholder_Count": (
+        "Stakeholder: alle Personen und Gruppen, die vom Projekt betroffen sind oder es beeinflussen können, etwa Auftraggeber, Fachbereiche, Nutzer oder Betriebsrat.",
+        "Stakeholder: all people and groups affected by the project or able to influence it, such as sponsors, business units, users or works councils."),
+    "Stakeholder_Engagement_Level": (
+        "Einbindung: wie aktiv Stakeholder informiert, beteiligt und in Entscheidungen einbezogen werden.",
+        "Engagement: how actively stakeholders are informed, involved and included in decisions."),
+    "Key_Stakeholder_Availability": (
+        "Zentrale Stakeholder: die wenigen Personen, ohne deren Entscheidung oder Zuarbeit das Projekt nicht vorankommt.",
+        "Key stakeholders: the few people without whose decisions or input the project cannot move forward."),
+    "Executive_Sponsorship": (
+        "Management-Unterstützung: der Rückhalt durch eine Führungskraft, die das Projekt gegenüber der Organisation vertritt, Ressourcen sichert und bei Konflikten entscheidet.",
+        "Executive sponsorship: backing by a senior manager who represents the project within the organisation, secures resources and decides in case of conflict."),
+    "Regulatory_Compliance_Level": (
+        "Regulatorische Anforderungen: verbindliche Vorgaben aus Gesetzen, Normen oder Aufsichtsrecht, die das Projekt einhalten muss, etwa Datenschutz oder branchenspezifische Auflagen.",
+        "Regulatory requirements: binding obligations from law, standards or supervisory rules that the project must meet, such as data protection or sector-specific conditions."),
+    "Market_Volatility": (
+        "Volatilität: wie stark und wie schnell sich Rahmenbedingungen ändern. Hier bezogen auf den Markt, in dem das Projektergebnis eingesetzt wird.",
+        "Volatility: how strongly and how quickly conditions change. Here in relation to the market in which the project result is used."),
+    "Industry_Volatility": (
+        "Branchenvolatilität: Veränderungsdruck in der gesamten Branche, etwa durch neue Technologien oder Regulierung. Weiter gefasst als die Volatilität des einzelnen Absatzmarktes.",
+        "Industry volatility: pressure to change across the entire sector, for example through new technologies or regulation. Broader than the volatility of a single market."),
+    "Seasonal_Risk_Factor": (
+        "Saisonaler Risikofaktor: ein Zuschlag für Zeiträume mit erhöhtem Risiko, etwa Jahresabschluss oder Urlaubszeit. 100 % bedeutet keinen Zuschlag.",
+        "Seasonal risk factor: a surcharge for periods of elevated risk such as year-end closing or holiday season. 100% means no surcharge."),
+    "Communication_Frequency": (
+        "Relativer Wert: eine Vergleichsgröße ohne feste Einheit. Höhere Werte bedeuten mehr Austausch als in einem durchschnittlichen Projekt.",
+        "Relative value: a comparative figure without a fixed unit. Higher values mean more exchange than in an average project."),
+    "Team_Colocation": (
+        "Colocation: das Arbeiten am selben Ort. Voll vor Ort bedeutet ein gemeinsames Büro, voll remote bedeutet vollständig verteilte Arbeit.",
+        "Colocation: working in the same place. Fully colocated means a shared office, fully remote means entirely distributed work."),
+    "Methodology_Used": (
+        "Arbeitsweise: die im Projekt eingesetzte Form der Zusammenarbeit. Der Datensatz führt Agile, Scrum und Kanban als Ausprägungen; fachlich sind das keine gleichrangigen Vorgehensmodelle.",
+        "Way of working: the form of collaboration used in the project. The dataset lists Agile, Scrum and Kanban; strictly speaking these are not equivalent categories."),
+    "Contract_Type": (
+        "Vertragsarten: Festpreis vergütet ein festgelegtes Ergebnis zum festen Preis. Zeit & Material vergütet den tatsächlichen Aufwand. Cost-Plus erstattet die Kosten zuzüglich eines Aufschlags.",
+        "Contract types: fixed-price pays a defined result for a set price. Time & materials pays actual effort. Cost-plus reimburses costs plus a margin."),
+    "Resource_Contention_Level": (
+        "Ressourcenkonkurrenz: mehrere Projekte greifen auf dieselben Personen oder Mittel zu, sodass Zuteilungen gegeneinander abgewogen werden müssen.",
+        "Resource contention: several projects draw on the same people or means, so allocations have to be weighed against each other."),
+    "Historical_Risk_Incidents": (
+        "Risikovorfall: ein eingetretenes Problem in einem früheren, vergleichbaren Projekt, etwa Terminverzug, Budgetüberschreitung oder Qualitätsmangel.",
+        "Risk incident: a problem that materialised in an earlier comparable project, such as delay, budget overrun or quality defect."),
+    "Organizational_Change_Frequency": (
+        "Organisatorische Änderung: Umbau von Strukturen im Umfeld des Projekts, etwa Umstrukturierung, Führungswechsel oder neue Zuständigkeiten.",
+        "Organisational change: restructuring in the project environment, such as reorganisation, changes in leadership or new responsibilities."),
+    "Previous_Delivery_Success_Rate": (
+        "Liefererfolg: der Anteil früherer Projekte, die im vereinbarten Rahmen aus Zeit, Budget und Umfang abgeschlossen wurden.",
+        "Delivery success: the share of past projects completed within the agreed frame of time, budget and scope."),
+    "Budget_Utilization_Rate": (
+        "Budgetauslastung: der Anteil des geplanten Budgets, der voraussichtlich verbraucht wird. Werte über 100 % zeigen eine erwartete Überschreitung an.",
+        "Budget utilisation: the share of the planned budget expected to be consumed. Values above 100% indicate an expected overrun."),
+}
+
 @st.cache_resource
 def _load():
     model, meta, spec, df = mb.load_all()
@@ -515,7 +598,12 @@ def _mini_cat(crit):
 def _tip(feat):
     ex = EXPL.get(feat)
     lead = (ex[0] if ss.lang == "de" else ex[1]) + " \u2014 " if ex else ""
-    return lead + T("levels") + ", ".join(vopt(o) for o in SPEC[feat]["options"])
+    text = lead + T("levels") + ", ".join(vopt(o) for o in SPEC[feat]["options"])
+    d = DEFS.get(feat)
+    if d:
+        text += "&#10;&#10;" + (d[0] if ss.lang == "de" else d[1])
+    # Einfache Anführungszeichen würden das title-Attribut vorzeitig beenden
+    return text.replace("'", "\u2019")
 
 
 def reliability(n):
