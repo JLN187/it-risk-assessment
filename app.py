@@ -1,6 +1,6 @@
 """
 IT Portfolio Risk Assessment - Streamlit-Prototyp
-Nutzt das trainierte Modell (model_pipeline.joblib) ueber model_bridge.py.
+Nutzt das trainierte Modell (model_pipeline.joblib) über model_bridge.py.
 Aufbauend auf: Karrenbauer & Breitner (2022)
 """
 import json
