@@ -147,6 +147,55 @@ DE_LABEL = {
  "Funding_Source": "Finanzierungsquelle", "Contract_Type": "Vertragsart", "Client_Experience_Level": "Vorerfahrung mit dem Kunden",
  "Organizational_Change_Frequency": "H\u00e4ufigkeit organisatorischer Ver\u00e4nderungen", "Priority_Level": "Priorit\u00e4t",
  "Schedule_Pressure": "Zeitdruck", "Project_Phase": "Projektphase", "Project_Start_Month": "Startmonat des Projekts"}
+EN_LABEL = {
+ "Complexity_Score": "Complexity Score",
+ "Integration_Complexity": "Integration Complexity",
+ "Cross_Functional_Dependencies": "Number of Cross-Functional Dependencies",
+ "External_Dependencies_Count": "Number of External Dependencies",
+ "Technology_Familiarity": "Technology Familiarity",
+ "Tech_Environment_Stability": "Stability of the Technical Environment",
+ "Technical_Debt_Level": "Technical Debt",
+ "Requirement_Stability": "Requirement Stability",
+ "Change_Request_Frequency": "Frequency of Change Requests",
+ "Team_Size": "Team Size",
+ "Stakeholder_Count": "Number of Stakeholders",
+ "Geographical_Distribution": "Number of Sites",
+ "Project_Budget_USD": "Project Budget",
+ "Budget_Utilization_Rate": "Budget Utilisation",
+ "Estimated_Timeline_Months": "Estimated Duration",
+ "Resource_Availability": "Resource Availability",
+ "Resource_Contention_Level": "Resource Contention",
+ "Current_Phase_Duration_Months": "Duration of Current Phase",
+ "Communication_Frequency": "Communication Frequency",
+ "Documentation_Quality": "Documentation Quality",
+ "Org_Process_Maturity": "Organisational Process Maturity",
+ "Team_Experience_Level": "Team Experience Level",
+ "Project_Manager_Experience": "Project Manager Experience",
+ "Past_Similar_Projects": "Number of Comparable Past Projects",
+ "Previous_Delivery_Success_Rate": "Success Rate of Past Deliveries",
+ "Methodology_Used": "Way of Working Used",
+ "Team_Colocation": "Degree of Team Colocation",
+ "Historical_Risk_Incidents": "Number of Past Risk Incidents",
+ "Risk_Management_Maturity": "Risk Management Maturity",
+ "Change_Control_Maturity": "Change Control Maturity",
+ "Vendor_Reliability_Score": "Supplier Reliability",
+ "Team_Turnover_Rate": "Team Turnover",
+ "Market_Volatility": "Market Volatility",
+ "Industry_Volatility": "Industry Volatility",
+ "Regulatory_Compliance_Level": "Regulatory Requirements",
+ "Data_Security_Requirements": "Data Security Requirements",
+ "Seasonal_Risk_Factor": "Seasonal Risk Factor",
+ "Executive_Sponsorship": "Executive Sponsorship",
+ "Stakeholder_Engagement_Level": "Stakeholder Engagement",
+ "Key_Stakeholder_Availability": "Availability of Key Stakeholders",
+ "Funding_Source": "Funding Source",
+ "Contract_Type": "Contract Type",
+ "Client_Experience_Level": "Prior Experience with the Client",
+ "Organizational_Change_Frequency": "Frequency of Organisational Change",
+ "Priority_Level": "Priority",
+ "Schedule_Pressure": "Schedule Pressure",
+ "Project_Phase": "Project Phase",
+ "Project_Start_Month": "Project Start Month"}
 VALUE_DE = {
  "Low": "Niedrig", "Medium": "Mittel", "High": "Hoch", "Very High": "Sehr hoch", "Critical": "Kritisch",
  "Volatile": "Volatil", "Moderate": "Moderat", "Stable": "Stabil", "New": "Neu", "Familiar": "Vertraut",
@@ -465,7 +514,9 @@ if LOAD_ERROR:
 
 
 def L(feat):
-    return DE_LABEL.get(feat, feat.replace("_", " ")) if ss.lang == "de" else mb.label_of(feat)
+    if ss.lang == "de":
+        return DE_LABEL.get(feat, feat.replace("_", " "))
+    return EN_LABEL.get(feat, mb.label_of(feat))
 
 
 def CAT(crit):
