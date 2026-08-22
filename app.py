@@ -60,7 +60,7 @@ STR = {
    "advice_title": "How to reduce this risk",
    "default_tag": "default", "advice_up": "The characteristics that push this project's risk up the most are {feats}. Improving these \u2013 for example by strengthening them or reducing their severity \u2013 has the strongest effect on lowering the overall risk.",
    "advice_down": "The characteristics that already help keep the risk down are {feats}. Reinforcing these further is the most effective way to protect the project against additional risk.", "load_pf": "Load portfolios (JSON)", "load_err_pf": "Could not read file.",
-   "nom_warn": "Not set by this slider (no ranking possible): {names}. Use \u201cSet individually\u201d if needed.",
+   "nom_warn": "Not set by this slider (no clear effect on risk): {names}. Use \u201cSet individually\u201d if needed.",
    "restrictions": "Restrictions", "restr_on": "Apply restrictions",
    "restr_hint": "Optional. Define portfolio limits; violations are flagged in the results.",
    "restr_a_pick": "Which totals to limit", "restr_a": "Portfolio totals (max)", "restr_b": "Portfolio averages", "restr_c": "Per-project rule",
@@ -109,7 +109,7 @@ STR = {
    "advice_title": "So l\u00e4sst sich das Risiko senken",
    "default_tag": "Standardwert", "advice_up": "Am st\u00e4rksten erh\u00f6hen {feats} das Risiko dieses Projekts. Wer hier ansetzt \u2013 etwa durch Verbessern oder Abschw\u00e4chen dieser Merkmale \u2013 senkt das Gesamtrisiko am wirkungsvollsten.",
    "advice_down": "Bereits risikomindernd wirken {feats}. Diese Merkmale weiter zu st\u00e4rken ist der wirksamste Weg, das Projekt gegen zus\u00e4tzliches Risiko abzusichern.", "load_pf": "Portfolios laden (JSON)", "load_err_pf": "Datei konnte nicht gelesen werden.",
-   "nom_warn": "Von diesem Regler nicht gesetzt (keine Rangordnung m\u00f6glich): {names}. Bei Bedarf \u201eEinzeln einstellen\u201c nutzen.",
+   "nom_warn": "Von diesem Regler nicht gesetzt (keine eindeutige Wirkung auf das Risiko): {names}. Bei Bedarf \u201eEinzeln einstellen\u201c nutzen.",
    "restrictions": "Restriktionen", "restr_on": "Restriktionen anwenden",
    "restr_hint": "Optional. Portfolio-Grenzwerte festlegen; Verletzungen werden in den Ergebnissen markiert.",
    "restr_a_pick": "Welche Summen begrenzen", "restr_a": "Portfoliosummen (max)", "restr_b": "Portfoliodurchschnitte", "restr_c": "Einzelprojekt-Regel",
@@ -870,13 +870,14 @@ def render_category_aggregate(pid, crit, feats):
     st.markdown(f"<div class='param-label'><span title='{T('tip_agg')}'>{T('overall')} {CAT(crit)} &#9432;</span>"
                 f"{_mini_cat(crit)}</div>", unsafe_allow_html=True)
     disp = ["N/A"] + [vopt(x) for x in AGG_EN[1:]]
-    choice = st.select_slider(" ", options=disp, value="N/A", key=f"agg_{pid}_{crit}", label_visibility="collapsed")
+    choice = st.select_slider(" ", options=disp, value="N/A", key=f"agg_{pid}_{crit}",
+                              label_visibility="collapsed")
     st.markdown(_ticks(disp), unsafe_allow_html=True)
     idx = disp.index(choice)
-    noms = [f for f in feats if SPEC[f]["type"] == "nominal"]
-    if idx > 0 and noms:
+    skipped = [f for f in feats if SPEC[f]["direction"] == 0]
+    if idx > 0 and skipped:
         st.markdown(f"<div class='nom-warn'>&#9888; "
-                    f"{T('nom_warn', names=', '.join(L(f) for f in noms))}</div>", unsafe_allow_html=True)
+                    f"{T('nom_warn', names=', '.join(L(f) for f in skipped))}</div>", unsafe_allow_html=True)
     else:
         st.markdown("<div class='nom-warn'>&nbsp;</div>", unsafe_allow_html=True)
     if idx == 0:
@@ -885,11 +886,11 @@ def render_category_aggregate(pid, crit, feats):
     risk_frac = frac if CAT_DIR.get(crit, 1) > 0 else (1 - frac)
     out = {}
     for f in feats:
-        if SPEC[f]["type"] == "nominal":
+        if SPEC[f]["direction"] == 0:
             out[f] = None
             continue
         o = SPEC[f]["options"]
-        ff = risk_frac if SPEC[f]["direction"] >= 0 else (1 - risk_frac)
+        ff = risk_frac if SPEC[f]["direction"] > 0 else (1 - risk_frac)
         out[f] = SPEC[f]["value_map"][o[round(ff * (len(o) - 1))]]
     return out
 
