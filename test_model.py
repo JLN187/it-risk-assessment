@@ -1,4 +1,10 @@
-"""Funktionsprüfung: lädt das exportierte Modell und erzeugt eine Beispielvorhersage."""
+"""
+Funktionsprüfung: lädt das exportierte Modell und erzeugt eine Beispielvorhersage.
+
+Entstanden im Rahmen der Bachelorarbeit "Vorhersage von
+IT-Projektrisikoniveaus mittels maschinellen Lernens", Leibniz Universität
+Hannover, Institut für Wirtschaftsinformatik, 2026
+"""
 import joblib
 import pandas as pd
 
