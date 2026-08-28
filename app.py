@@ -1,7 +1,16 @@
 """
 IT Portfolio Risk Assessment - Streamlit-Prototyp
-Nutzt das trainierte Modell (model_pipeline.joblib) über model_bridge.py.
-Aufbauend auf: Karrenbauer & Breitner (2022)
+
+Oberfläche zur Risikoeinstufung einzelner IT-Projekte und zur Zusammenstellung
+eines Portfolios. Die Eingabe ist nach den fünf Bewertungskriterien von
+Karrenbauer und Breitner (2022) gegliedert; die Einstufung liefert das in
+model_pipeline.joblib abgelegte Modell über model_bridge.py.
+
+Entstanden im Rahmen der Bachelorarbeit "Vorhersage von
+IT-Projektrisikoniveaus mittels maschinellen Lernens", Leibniz Universität
+Hannover, Institut für Wirtschaftsinformatik, 2026
+
+Start: streamlit run app.py
 """
 import json
 from contextlib import nullcontext
