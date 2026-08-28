@@ -5,6 +5,10 @@ Stellt bereit: Merkmalsschema mit lesbaren Stufen, Risikorichtung je Merkmal,
 Einzelvorhersage, Portfolioaggregation und SHAP-basierte Erklärung.
 Enthält bewusst keine Streamlit-Abhängigkeit, damit die Logik unabhängig von
 der Oberfläche geprüft werden kann.
+
+Entstanden im Rahmen der Bachelorarbeit "Vorhersage von
+IT-Projektrisikoniveaus mittels maschinellen Lernens", Leibniz Universität
+Hannover, Institut für Wirtschaftsinformatik, 2026
 """
 import numpy as np
 import pandas as pd
