@@ -1,0 +1,24 @@
+# Unmittelbare Abhängigkeiten von Auswertungsskript und Prototyp.
+# Getestet mit Python 3.13 unter Windows.
+# Installation: pip install -r requirements.txt
+
+# Datenhaltung und Berechnung
+numpy==2.4.4
+pandas==3.0.2
+scipy==1.17.1
+
+# Modellbildung und Bewertung
+scikit-learn==1.8.0
+xgboost==3.3.0
+imbalanced-learn==0.14.2
+joblib==1.5.3
+
+# Erklärung der Merkmalsbeiträge
+shap==0.52.0
+
+# Abbildungen
+matplotlib==3.11.1
+
+# Oberfläche des Prototyps
+streamlit==1.59.1
+
