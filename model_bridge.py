@@ -10,9 +10,15 @@ Entstanden im Rahmen der Bachelorarbeit "Vorhersage von
 IT-Projektrisikoniveaus mittels maschinellen Lernens", Leibniz Universität
 Hannover, Institut für Wirtschaftsinformatik, 2026
 """
+import os
+
 import numpy as np
 import pandas as pd
 import joblib
+
+# Alle Dateien werden neben diesem Modul erwartet, damit die Anwendung
+# unabhängig vom Arbeitsverzeichnis startet.
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ---------------------------------------------------------------------------
 # Merkmalsschema
@@ -233,11 +239,12 @@ def _sync_schema(meta):
     NOMINAL_COLS = list(meta.get("nominal_cols", NOMINAL_COLS))
 
 
-def load_all(model_path="model_pipeline.joblib",
-             meta_path="feature_defaults.joblib",
-             csv_path="project_risk_raw_dataset.csv"):
+def load_all(model_path=None, meta_path=None, csv_path=None):
     """Lädt Modell, Metadaten und Rohdaten. Die Rohdaten werden nur benötigt, um
     Stufengrenzen und Risikorichtungen abzuleiten, nicht für die Vorhersage."""
+    model_path = model_path or os.path.join(BASE_DIR, "model_pipeline.joblib")
+    meta_path = meta_path or os.path.join(BASE_DIR, "feature_defaults.joblib")
+    csv_path = csv_path or os.path.join(BASE_DIR, "project_risk_raw_dataset.csv")
     model = joblib.load(model_path)
     meta = joblib.load(meta_path)
     _sync_schema(meta)

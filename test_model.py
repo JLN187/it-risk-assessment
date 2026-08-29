@@ -5,15 +5,19 @@ Entstanden im Rahmen der Bachelorarbeit "Vorhersage von
 IT-Projektrisikoniveaus mittels maschinellen Lernens", Leibniz Universität
 Hannover, Institut für Wirtschaftsinformatik, 2026
 """
+import os
+
 import joblib
 import pandas as pd
 
-model = joblib.load("model_pipeline.joblib")
-meta = joblib.load("feature_defaults.joblib")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+model = joblib.load(os.path.join(BASE_DIR, "model_pipeline.joblib"))
+meta = joblib.load(os.path.join(BASE_DIR, "feature_defaults.joblib"))
 
 # keep_default_na=False: der Kategoriewert "None" bezeichnet die unterste
 # Reifestufe und muss als Zeichenkette erhalten bleiben.
-df = pd.read_csv("project_risk_raw_dataset.csv", keep_default_na=False, na_filter=False)
+df = pd.read_csv(os.path.join(BASE_DIR, "project_risk_raw_dataset.csv"),
+                 keep_default_na=False, na_filter=False)
 df = df[df["Project_Type"] == "IT"]
 df = df[meta["all_features"]]        # Spaltenauswahl und -reihenfolge wie im Training
 
