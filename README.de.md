@@ -131,8 +131,6 @@ Der Datensatz enthält keine Fehlwerte. Der Wert „None“ in den Reifegradmerk
 
 Julien Aldag · Master Wirtschaftsingenieurwesen, Leibniz Universität Hannover · [LinkedIn](https://www.linkedin.com/in/julien-aldag)
 
-Betreuung: M. Sc. Fenja Schulte · Prüfer: Prof. Dr. Michael H. Breitner
-
 ## Lizenz
 
 - **Code:** MIT, siehe `LICENSE`
