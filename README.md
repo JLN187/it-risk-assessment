@@ -131,8 +131,6 @@ The dataset contains no missing values. The value "None" in the maturity feature
 
 Julien Aldag · M.Sc. student in Industrial Engineering and Management (Wirtschaftsingenieurwesen), Leibniz Universität Hannover · [LinkedIn](https://www.linkedin.com/in/julien-aldag)
 
-Supervisor: M. Sc. Fenja Schulte · Examiner: Prof. Dr. Michael H. Breitner
-
 ## License
 
 - **Code:** MIT, see `LICENSE`
